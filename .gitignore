@@ -1,0 +1,13 @@
+._*
+.DS_Store
+.DAV
+.lastupdate
+.php_cs.*
+.svn
+*.bak
+*.old
+*.org
+_notes
+Desktop.ini
+Thumbs.DB
+confidential
