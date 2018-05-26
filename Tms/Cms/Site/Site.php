@@ -529,9 +529,9 @@ class Site extends \Tms\Cms
                 $sectionkey
             ])
         );
-        if (!is_dir($path)) {
-            \P5\File::mkdir($path);
-        }
+        //if (!is_dir($path)) {
+        //    \P5\File::mkdir($path);
+        //}
 
         return $path;
     }

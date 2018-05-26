@@ -45,7 +45,7 @@ class Section extends Entry
             'create_date', 'modify_date', 'lft', 'rgt',
         ];
 
-        $eid = $this->request->param('eid');
+        $entrykey = $this->request->param('eid');
         $parent_id = $this->request->param('prn');
 
         $post = $this->request->POST();
@@ -83,18 +83,18 @@ class Section extends Entry
         if (empty($post['id'])) {
             $raw['create_date'] = 'CURRENT_TIMESTAMP';
             $save['sitekey'] = $this->siteID;
-            $save['entrykey'] = $eid;
+            $save['entrykey'] = $entrykey;
 
             if (empty($parent_id)) {
                 $statement = 'entrykey = ? AND revision = ?';
-                $options = [$eid, 0];
+                $options = [$entrykey, 0];
                 $parent_rgt = (int) $this->db->max('rgt', 'section', $statement, $options) + 1;
                 $save['lft'] = $parent_rgt;
                 $save['rgt'] = $parent_rgt + 1;
             } else {
                 $child = '(SELECT * FROM table::section WHERE entrykey = :entry_id AND revision = 0)';
                 $parent = '(SELECT * FROM table::section WHERE id = ?)';
-                if (false === $unit = $this->db->nsmGetPosition($parent, $child, ['entry_id' => $eid, $parent_id])) {
+                if (false === $unit = $this->db->nsmGetPosition($parent, $child, ['entry_id' => $entrykey, $parent_id])) {
                     return false;
                 }
                 $parent_lft = (float) $unit['lft'];
@@ -126,7 +126,7 @@ class Section extends Entry
         }
         if ($result !== false) {
             $modified = ($result > 0) ? $this->db->modified($table, 'id = ?', [$post['id']]) : true;
-            $file_count = $this->saveFiles($eid, $post['id']);
+            $file_count = $this->saveFiles($entrykey, $post['id']);
 
             $customs = [];
             foreach ($post as $key => $value) {
@@ -147,7 +147,7 @@ class Section extends Entry
 
                     if ($this->siteProperty('type') === 'static') {
                         // Rebuild entry file
-                        $entrykey = $this->db->get('id', 'entry', 'identifier = ? AND active = 1', [$eid]);
+                        $entrykey = $this->db->get('id', 'entry', 'identifier = ? AND active = 1', [$entrykey]);
                         if (!empty($entrykey)) {
                             $this->createEntryFile($entrykey);
                             $this->buildArchives($entrykey);
@@ -155,7 +155,7 @@ class Section extends Entry
                     }
                 }
                 elseif ($this->request->param('publish') === 'private') {
-                    if (false === $this->to_private($post)) {
+                    if (false === $this->toPrivate($post)) {
                         $result = false;
                     }
                 }
@@ -194,17 +194,32 @@ class Section extends Entry
      *
      * @return bool
      */
-    protected function to_private($post)
+    protected function toPrivate($post)
     {
         $this->checkPermission('cms.entry.publish');
 
         $return_value = true;
-        $eid = $post['id'];
-        if (false === $ret = $this->db->update('section', ['active' => '0'], 'identifier = ?', [$eid])) {
+
+        $sectionkey = $post['id'];
+        $entrykey = $this->db->get('entrykey', 'section', 'id = ?', [$sectionkey]);
+        $active_sectionkey = $this->db->get('id', 'section', 'identifier = ? AND active = ?', [$sectionkey, 1]);
+
+        if (false === $ret = $this->db->update('section', ['active' => '0'], 'identifier = ?', [$sectionkey])) {
             return false;
         }
         if ($ret > 0) {
             $this->db->update('section', ['status' => $this->request->param('publish')], 'id = ?', [$id], $raw);
+        }
+
+        $sectionkey = $active_sectionkey;
+        $this->removeFiles($entrykey, $sectionkey);
+
+        if ($this->siteProperty('type') === 'static') {
+            if (   false === $this->createEntryFile($entrykey)
+                || false === $this->buildArchives($entrykey)
+            ) {
+                $return_value = false;
+            }
         }
 
         return $return_value;
@@ -219,15 +234,27 @@ class Section extends Entry
     {
         $this->checkPermission('cms.entry.delete');
 
-        $id = $this->request->param('remove');
-        $eid = $this->getEntryKey($id);
+        $sectionkey = $this->request->param('remove');
+        $entrykey = $this->getEntryKey($sectionkey);
+
+        // Remove attachment files
+        $directories = $this->db->select('id', 'section', 'WHERE identifier = ?', [$sectionkey]);
+        foreach ($directories as $directory) {
+            $this->removeFiles($entrykey, $directory['id']);
+        }
 
         $this->db->begin();
-        $table = $this->db->TABLE('section');
 
-        $unit = $this->db->get('lft, rgt', 'section', 'id = ?', [$id]);
+        $unit = $this->db->get('lft, rgt', 'section', 'id = ?', [$sectionkey]);
 
-        if (false !== $this->db->delete('section', 'entrykey = ? AND lft BETWEEN ? AND ?', [$eid, $unit['lft'], $unit['rgt']])) {
+        if (false !== $this->db->delete('section', 'entrykey = ? AND lft BETWEEN ? AND ?', [$entrykey, $unit['lft'], $unit['rgt']])) {
+
+            // Rebuild entry file
+            if (!empty($entrykey)) {
+                $this->createEntryFile($entrykey);
+                $this->buildArchives($entrykey);
+            }
+
             return $this->db->commit();
         }
         trigger_error($this->db->error());
@@ -239,36 +266,36 @@ class Section extends Entry
     /**
      * Parent section.
      *
-     * @param int $id
+     * @param int $sectionkey
      *
      * @return int
      */
-    public function getParentSection($id)
+    public function getParentSection($sectionkey)
     {
-        if (empty($id)) {
+        if (empty($sectionkey)) {
             return $this->request->param('prn');
         }
-        $eid = $this->getEntryKey($id);
+        $entrykey = $this->getEntryKey($sectionkey);
 
         $parent = '(SELECT * FROM table::section WHERE entrykey = :entry_id AND revision = 0)';
         $children = '(SELECT * FROM table::section WHERE id = :section_id)';
 
-        return $this->db->nsmGetParent('parent.id', $parent, $children, ['entry_id' => $eid, 'section_id' => $id]);
+        return $this->db->nsmGetParent('parent.id', $parent, $children, ['entry_id' => $entrykey, 'section_id' => $sectionkey]);
     }
 
     /**
      * Entry of the section.
      *
-     * @param int $id
+     * @param int $sectionkey
      *
      * @return mixed
      */
-    public function getEntryKey($id)
+    public function getEntryKey($sectionkey)
     {
-        if (empty($id)) {
+        if (empty($sectionkey)) {
             return $this->request->param('eid');
         }
 
-        return $this->db->get('entrykey', 'section', 'id = ?', [$id]);
+        return $this->db->get('entrykey', 'section', 'id = ?', [$sectionkey]);
     }
 }

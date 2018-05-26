@@ -136,7 +136,7 @@ class Entry extends Category
                     }
                 }
                 elseif ($this->request->param('publish') === 'private') {
-                    if (false === $this->to_private($post)) {
+                    if (false === $this->toPrivate($post)) {
                         $result = false;
                     }
                 }
@@ -205,13 +205,16 @@ class Entry extends Category
 
                 if (empty($name)) {
                     if (isset($delete[$key])) {
-                        //$data = $this->db->get('data', 'custom', 'sitekey = ? AND id = ?', [$this->siteID, $delete[$key]]);
-                        //$path = $upload_dir.'/'.basename($data);
                         if (file_exists($old_path) && is_file($old_path)) {
                             unlink($old_path);
                         }
 
                         self::clearPDFThumbnail($old_path.parent::THUMBNAIL_EXTENSION);
+
+                        $directory = dirname($old_path);
+                        if (count(glob("$directory/*")) === 0) {
+                            rmdir($directory);
+                        }
 
                         if (false === $ret = $this->db->delete('custom', 'sitekey = ? AND id = ?', [$this->siteID, $delete[$key]])) {
                             trigger_error($this->db->error());
@@ -227,6 +230,12 @@ class Entry extends Category
                         return false;
                     }
 
+                    if (!isset($save_data['option1'])) {
+                        $save_data['option1'] = null;
+                    }
+                    if (!isset($old['option1'])) {
+                        $old['option1'] = null;
+                    }
                     if ($save_data['option1'] !== $old['option1'] && $old['mime'] === 'application/pdf') {
                         $upload_path = $upload_dir.'/'.basename($old['data']);
                         self::createPDFThumbnail($this->command_convert, $upload_path, $save_data['option1']);
@@ -287,6 +296,11 @@ class Entry extends Category
                         unlink($old_path);
                     }
                 }
+
+                $directory = dirname($upload_path);
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0777, true);
+                }
                 if (move_uploaded_file($_FILES['file']['tmp_name'][$key], $upload_path)) {
 
                     // Create PDF thumbnail
@@ -308,6 +322,20 @@ class Entry extends Category
     }
 
     /**
+     * Remove upload files.
+     *
+     * @param int $entrykey
+     * @param int $sectionkey
+     *
+     * @return bool
+     */
+    protected function removeFiles($entrykey, $sectionkey = null)
+    {
+        $upload_dir = $this->fileUploadDir($entrykey, $sectionkey);
+        return \P5\File::rmdir($upload_dir, true);
+    }
+
+    /**
      * Release the entry.
      *
      * @param array $post
@@ -322,16 +350,16 @@ class Entry extends Category
         $return_value = true;
 
         $sid = $this->siteID;
-        $eid = $post['id'];
+        $entrykey = $post['id'];
         $table = 'entry';
 
-        $latest_version = $this->db->max('revision', $table, 'sitekey = ? AND identifier = ?', [$sid, $eid]);
+        $latest_version = $this->db->max('revision', $table, 'sitekey = ? AND identifier = ?', [$sid, $entrykey]);
         $new_version = (int) $latest_version + 1;
 
         $upload_dir = $this->fileUploadDir();
 
         if ($copy || $latest_version === '0') {
-            $this->db->update($table, ['active' => '0'], 'identifier = ?', [$eid]);
+            $this->db->update($table, ['active' => '0'], 'identifier = ?', [$entrykey]);
 
             $fields = $this->db->getFields($table);
             $cols = [];
@@ -352,20 +380,20 @@ class Entry extends Category
                         break;
                 }
             }
-            if (false === $this->db->copyRecord($cols, $table, '', 'id = ?', [$eid])) {
+            if (false === $this->db->copyRecord($cols, $table, '', 'id = ?', [$entrykey])) {
                 return false;
             }
-            $entrykey = $this->db->lastInsertId(null, 'id');
+            $new_entrykey = $this->db->lastInsertId(null, 'id');
             $raw = null;
-            $this->db->update($table, ['status' => $this->request->param('publish')], 'id = ?', [$eid], $raw);
+            $this->db->update($table, ['status' => $this->request->param('publish')], 'id = ?', [$entrykey], $raw);
 
             // Remove older version
             $save_count = $this->db->get('maxrevision', 'site', 'id = ?', [$this->siteID]);
             $limit = $new_version - (int) $save_count;
 
-            if (false !== $deletes = $this->db->select('id', $table, "WHERE sitekey = ? AND identifier = ? AND revision > '0' AND revision < ?", [$sid, $eid, $limit])) {
+            if (false !== $deletes = $this->db->select('id', $table, "WHERE sitekey = ? AND identifier = ? AND revision > '0' AND revision < ?", [$sid, $entrykey, $limit])) {
                 foreach ($deletes as $delete) {
-                    \P5\File::rmdirs("$upload_dir/{$delete['id']}", true);
+                    \P5\File::rmdir("$upload_dir/{$delete['id']}", true);
                     // Custom fields
                     if (false === $this->db->delete('custom', 'sitekey = ? AND kind = ? AND relkey = ?', [$sid, 'entry', $delete['id']])) {
                         trigger_error($this->db->error());
@@ -375,7 +403,7 @@ class Entry extends Category
                 }
             }
 
-            if (false === $this->db->delete($table, "sitekey = ? AND identifier = ? AND revision > '0' AND revision < ?", [$sid, $eid, $limit])) {
+            if (false === $this->db->delete($table, "sitekey = ? AND identifier = ? AND revision > '0' AND revision < ?", [$sid, $entrykey, $limit])) {
                 trigger_error($this->db->error());
 
                 return false;
@@ -387,23 +415,23 @@ class Entry extends Category
                     $save[$x_date] = date('Y-m-d H:i', \P5\Text::strtotime($post[$x_date]));
                 }
             }
-            $this->db->update($table, $save, 'identifier = ? ORDER BY revision DESC LIMIT 1', [$eid]);
-            $entrykey = $this->db->get('id', $table, 'identifier = ? AND active = 1', [$eid]);
+            $this->db->update($table, $save, 'identifier = ? ORDER BY revision DESC LIMIT 1', [$entrykey]);
+            $new_entrykey = $this->db->get('id', $table, 'identifier = ? AND active = 1', [$entrykey]);
         }
 
         // Release sections
-        $sections = $this->db->select('id, entrykey AS eid', 'section', 'WHERE entrykey = ? AND revision = ? AND status = ?', [$eid, '0', 'draft']);
+        $sections = $this->db->select('id, entrykey AS eid', 'section', 'WHERE entrykey = ? AND revision = ? AND status = ?', [$entrykey, '0', 'draft']);
         foreach ($sections as $section) {
             if (false === $this->releaseSection($section, true)) {
                 return false;
             }
         }
 
-        $release_path = $this->getEntryPath($eid);
+        $release_path = $this->getEntryPath($entrykey);
         $release_dir = dirname($release_path);
 
         // Remove older files
-        if ($files = $this->db->select('filepath', $table, 'WHERE sitekey = ? AND identifier = ?', [$sid, $eid])) {
+        if ($files = $this->db->select('filepath', $table, 'WHERE sitekey = ? AND identifier = ?', [$sid, $entrykey])) {
             foreach ((array) $files as $file) {
                 $remove_file = $release_dir.'/'.$file['filepath'];
                 if (file_exists($remove_file) && is_file($remove_file)) {
@@ -413,21 +441,21 @@ class Entry extends Category
         }
 
         // Copy attachment files
-        $identifier = $this->db->get('identifier', $table, 'id = ?', [$entrykey]);
+        $identifier = $this->db->get('identifier', $table, 'id = ?', [$new_entrykey]);
         $src = \P5\File::realpath("$upload_dir/$identifier");
         if (is_dir($src)) {
-            $dest = \P5\File::realpath("$upload_dir/$entrykey");
+            $dest = \P5\File::realpath("$upload_dir/$new_entrykey");
             if (is_dir($dest)) {
-                \P5\File::rmdirs($dest, true);
+                \P5\File::rmdir($dest, true);
             }
             \P5\File::copydir($src, $dest, true);
         }
 
-        $this->copyCustomFields($entrykey);
+        $this->copyCustomFields($new_entrykey);
 
         if ($this->siteProperty('type') === 'static') {
             try {
-                $source = $this->build($entrykey);
+                $source = $this->build($new_entrykey);
                 if (!empty($source)) {
                     // Check release path
                     if (!file_exists($release_dir) && !\P5\File::mkdir($release_dir)) {
@@ -439,7 +467,7 @@ class Entry extends Category
                     @unlink($release_path);
                     $this->app->logger->log("Remove entry file `$release_path'", 101);
                 }
-                $this->buildArchives($entrykey);
+                $this->buildArchives($new_entrykey);
             } catch (\Exception $e) {
                 trigger_error($e->getMessage());
 
@@ -465,7 +493,7 @@ class Entry extends Category
         $return_value = true;
 
         $sid = $this->siteID;
-        $eid = $post['eid'];
+        $entrykey = $post['eid'];
         $id = $post['id'];
         $table = 'section';
 
@@ -510,7 +538,7 @@ class Entry extends Category
 
             if (false !== $deletes = $this->db->select('id, entrykey', $table, "WHERE sitekey = ? AND identifier = ? AND revision > '0' AND revision < ?", [$sid, $id, $limit])) {
                 foreach ($deletes as $delete) {
-                    \P5\File::rmdirs("$upload_dir/{$delete['entrykey']}/{$delete['id']}", true);
+                    \P5\File::rmdir("$upload_dir/{$delete['entrykey']}/{$delete['id']}", true);
                     // Custom fields
                     if (false === $this->db->delete('custom', 'sitekey = ? AND kind = ? AND relkey = ?', [$sid, 'section', $delete['id']])) {
                         trigger_error($this->db->error());
@@ -538,17 +566,17 @@ class Entry extends Category
 
         // Copy attachment files
         $identifier = $this->db->get('identifier', $table, 'id = ?', [$sectionkey]);
-        $src = \P5\File::realpath("$upload_dir/$eid/$identifier");
+        $src = \P5\File::realpath("$upload_dir/$entrykey/$identifier");
         if (is_dir($src)) {
-            $dest = \P5\File::realpath("$upload_dir/$eid/$sectionkey");
+            $dest = \P5\File::realpath("$upload_dir/$entrykey/$sectionkey");
             if (is_dir($dest)) {
-                \P5\File::rmdirs($dest, true);
+                \P5\File::rmdir($dest, true);
             }
             \P5\File::copydir($src, $dest, true);
         }
 
         // Copy custom fields
-        $this->copyCustomFields($eid, $sectionkey);
+        $this->copyCustomFields($entrykey, $sectionkey);
 
         return $return_value;
     }
@@ -582,32 +610,39 @@ class Entry extends Category
      *
      * @return bool
      */
-    protected function to_private($post)
+    protected function toPrivate($post)
     {
         $this->checkPermission('cms.entry.publish');
 
         $return_value = true;
 
         $table = 'entry';
-        $eid = $post['id'];
-        if (false === $ret = $this->db->update($table, ['active' => '0'], 'identifier = ?', [$eid])) {
+        $entrykey = $post['id'];
+        if (false === $ret = $this->db->update($table, ['active' => '0'], 'identifier = ?', [$entrykey])) {
             return false;
         }
         if ($ret > 0) {
-            $this->db->update($table, ['status' => $this->request->param('publish')], 'id = ?', [$eid]);
+            $this->db->update($table, ['status' => $this->request->param('publish')], 'id = ?', [$entrykey]);
         }
+
+        $this->removeFiles($entrykey);
 
         if ($this->siteProperty('type') === 'static') {
             // Rebuild Archives
-            if (false === $this->buildArchives($eid)) {
+            if (false === $this->buildArchives($entrykey)) {
                 return false;
             }
 
-            $release_path = $this->getEntryPath($eid);
+            $release_path = $this->getEntryPath($entrykey);
             if (file_exists($release_path)) {
                 if (false === @unlink($release_path)) {
-                    $return_value = false;
+                    return false;
                 }
+            }
+
+            $directory = dirname($release_path);
+            if (count(glob("$directory/*")) === 0) {
+                rmdir($directory);
             }
         }
 
@@ -626,7 +661,13 @@ class Entry extends Category
         list($kind, $id) = explode(':', $this->request->param('delete'));
 
         // Remove Public files
-        $this->to_private(['id' => $id]);
+        $this->toPrivate(['id' => $id]);
+
+        // Clean up attachment files
+        $directories = $this->db->select('id', 'entry', 'WHERE identifier = ?', [$id]);
+        foreach ($directories as $directory) {
+            $this->removeFiles($directory['id']);
+        }
 
         if ($kind === 'category') {
             return parent::remove();
@@ -788,13 +829,13 @@ class Entry extends Category
     /**
      * Create HTML file.
      *
-     * @param int $eid
+     * @param int $entrykey
      *
      * @return bool
      */
-    protected function createEntryFile($eid)
+    protected function createEntryFile($entrykey)
     {
-        $release_path = $this->getEntryPath($eid);
+        $release_path = $this->getEntryPath($entrykey);
         if (empty($release_path)) {
             return false;
         }
@@ -806,7 +847,7 @@ class Entry extends Category
         }
 
         // Remove older files
-        if ($files = $this->db->select('filepath', 'entry', 'WHERE identifier = ?', [$eid])) {
+        if ($files = $this->db->select('filepath', 'entry', 'WHERE identifier = ?', [$entrykey])) {
             foreach ((array) $files as $file) {
                 $remove_file = $dir.'/'.$file['filepath'];
                 if (file_exists($remove_file)) {
@@ -815,7 +856,7 @@ class Entry extends Category
             }
         }
 
-        $source = $this->build($eid);
+        $source = $this->build($entrykey);
         if (empty($source)) {
             if (file_exists($release_path)) {
                 @unlink($release_path);
@@ -853,7 +894,7 @@ class Entry extends Category
         $upload_dir = $this->fileUploadDir('preview');
         if (file_exists($upload_dir)) {
             $this->db->delete('custom', 'sitekey = ? AND relkey = ? AND kind = ? AND name LIKE ?', [$this->siteID, 0, 'entry', 'file.%']);
-            \P5\File::rmdirs($upload_dir, true);
+            \P5\File::rmdir($upload_dir, true);
         }
     }
 
@@ -870,12 +911,12 @@ class Entry extends Category
     /**
      * Relational entries
      *
-     * @param int   $eid
+     * @param int   $entrykey
      * @param array $columns
      *
      * @return array
      */
-    public function relations($eid, array $columns = null)
+    public function relations($entrykey, array $columns = null)
     {
         $cols = [];
         if (is_null($columns)) {
@@ -895,18 +936,18 @@ class Entry extends Category
                             ON r.entrykey = e.id) rev
                     ON rel.id = rev.relkey";
         
-        return $this->db->getAll($sql, [$eid]);
+        return $this->db->getAll($sql, [$entrykey]);
     }
 
     /**
      * Recommend entries
      *
-     * @param int   $eid
+     * @param int   $entrykey
      * @param array $columns
      *
      * @return array
      */
-    public function recommends($eid, array $columns = null)
+    public function recommends($entrykey, array $columns = null)
     {
         $cols = [];
         if (is_null($columns)) {
@@ -926,7 +967,7 @@ class Entry extends Category
                             ON r.entrykey = e.identifier) rev
                     ON rel.identifier = rev.relkey";
         
-        return $this->db->getAll($sql, [$eid]);
+        return $this->db->getAll($sql, [$entrykey]);
     }
 
     public static function clearPDFThumbnail($pdf)

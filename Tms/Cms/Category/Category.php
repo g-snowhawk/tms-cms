@@ -167,11 +167,7 @@ class Category extends Template
                 && false !== $result = $this->db->insert($table, $save, $raw)
             ) {
                 $post['id'] = $this->db->lastInsertId(null, 'id');
-                //if (!$this->breakPermission($post['id'])) {
-                //    $result = false;
-                //}
             }
-            $reassembly = ($this->siteProperty('type') === 'static');
         } else {
             if (false !== $result = $this->moveCategory($post['id'], $post['parent'])) {
                 $result = $this->db->update($table, $save, "id = ? AND reserved = '0'", [$post['id']], $raw);
@@ -592,6 +588,13 @@ class Category extends Template
             $url = $this->getCategoryPath($category['id'], 2);
             $dir = \P5\File::realpath($this->site_data['openpath'].'/'.$url);
 
+            if (!empty($category['archive_format'])) {
+                $format = preg_replace('/%[a-z]/i', '*', $category['archive_format']);
+                foreach ((array)glob("$dir/$format.$file_extension") as $remove_file) {
+                    unlink($remove_file);
+                }
+            }
+
             $arr_archives_name = [];
             if (!empty($category['archive_format'])) {
                 $fetch = $this->getArchivesLink($category['id']);
@@ -863,17 +866,14 @@ class Category extends Template
     /**
      * Children of the section.
      *
-     * @param int   $eid
-     * @param int   $id
+     * @param int   $entrykey
+     * @param int   $sectionkey
      * @param array $columns
      *
      * @return array
      */
-    public function sections($eid, $id, array $columns = null, $sort = 'ASC')
+    public function sections($entrykey, $sectionkey, array $columns = null, $sort = 'ASC')
     {
-        $table = $this->db->TABLE('section');
-        $entrykey = $this->db->quote($eid);
-
         $cols = ['children.id AS relkey'];
         if (is_null($columns)) {
             $cols[] = 'children.*';
@@ -887,14 +887,14 @@ class Category extends Template
         $statement = $this->filterPreview();
         $order = " ORDER BY children.author_date $sort";
 
-        if (is_null($id)) {
+        if (is_null($sectionkey)) {
             $table = "(SELECT * FROM table::section WHERE entrykey = :entry_id$statement ORDER BY author_date)";
-            $list = (array)$this->db->nsmGetRoot($columns, $table, null, ['entry_id' => $eid], $order);
+            $list = (array)$this->db->nsmGetRoot($columns, $table, null, ['entry_id' => $entrykey], $order);
         }
         else {
             $parent = '(SELECT * FROM table::section WHERE id = :section_id)';
             $children = "(SELECT * FROM table::section WHERE entrykey = :entry_id$statement)";
-            $list = (array)$this->db->nsmGetChildren($columns, $parent, $children, $children, " AND children.id IS NOT NULL$order", ['entry_id' => $eid, 'section_id' => $id]);
+            $list = (array)$this->db->nsmGetChildren($columns, $parent, $children, $children, " AND children.id IS NOT NULL$order", ['entry_id' => $entrykey, 'section_id' => $sectionkey]);
         }
 
         // custom data
@@ -1013,8 +1013,6 @@ class Category extends Template
      */
     public function childSections($eid, $id, array $columns = null)
     {
-        $entrykey = $this->db->quote($eid);
-
         $cols = [];
         if (is_null($columns)) {
             $cols[] = 'children.*';
@@ -1257,7 +1255,7 @@ class Category extends Template
      */
     protected function filterPreview()
     {
-        return ($this->session->param('ispreview') === 1) ? ' AND revision = 0' : ' AND active = 1';
+        return ((int)$this->session->param('ispreview') === 1) ? ' AND revision = 0' : ' AND active = 1';
     }
 
     /**
@@ -1288,25 +1286,24 @@ class Category extends Template
                 continue;
             }
 
+            $url = $this->getCategoryPath($category['id'], 2);
+            $dir = \P5\File::realpath($this->site_data['openpath'].'/'.$url);
+            $directory_exists = file_exists($dir);
+
             $arr_archives_name = [];
             if (!empty($category['archive_format'])) {
+
+                $format = preg_replace('/%[a-z]/i', '*', $category['archive_format']);
+                foreach ((array)glob("$dir/$format.$file_extension") as $remove_file) {
+                    unlink($remove_file);
+                }
+
                 $fetch = $this->getArchivesLink($category['id']);
                 foreach ((array)$fetch as $unit) {
                     $arr_archives_name[] = $unit['format'];
                 }
             }
             array_unshift($arr_archives_name, $original_file);
-
-            $url = $this->getCategoryPath($category['id'], 2);
-            $dir = \P5\File::realpath($this->site_data['openpath'].'/'.$url);
-            if (!file_exists($dir)) {
-                try {
-                    mkdir($dir, 0777, true);
-                } catch (\ErrorException $e) {
-                    trigger_error($e->getMessage());
-                    return false;
-                }
-            }
 
             foreach ($arr_archives_name as $file_name) {
 
@@ -1328,6 +1325,17 @@ class Category extends Template
                         $this->page_suffix_watcher,
                         $file_extension
                     );
+
+                    if (!$directory_exists) {
+                        try {
+                            mkdir($dir, 0777, true);
+                            $directory_exists = true;
+                        } catch (\ErrorException $e) {
+                            trigger_error($e->getMessage());
+                            return false;
+                        }
+                    }
+
                     if (false === file_put_contents($path, $source)) {
                         trigger_error("Can't assembled $path");
 
