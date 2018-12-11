@@ -82,7 +82,9 @@ class Response extends \Tms\Cms\Site
         $check = (empty($id)) ? 'create' : 'update';
         $this->checkPermission('cms.site.'.$check, $this->request->param('id'));
 
-        if ($this->request->method === 'post') {
+        if (   $this->request->method === 'post'
+            && $this->request->param('convert_request_method') !== 'get'
+        ) {
             $post = $this->request->POST();
         } elseif (empty($id)) {
             // Default values

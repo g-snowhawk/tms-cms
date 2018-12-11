@@ -22,4 +22,9 @@ class Ja extends \P5\Lang
      * WARNINGS.
      */
     protected $NOT_EMPTY = "このカテゴリは空ではありません！\n従って削除はできません";
+
+    /**
+     * HEADERS
+     */
+    protected $PAGE_TITLE = 'カテゴリ管理';
 }

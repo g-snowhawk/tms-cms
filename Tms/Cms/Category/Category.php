@@ -210,32 +210,6 @@ class Category extends Template
         return false;
     }
 
-    //private function breakPermission($id)
-    //{
-    //    if (false === $priv = $this->hasPermission('cms.category.inherit', $this->siteID, $this->categoryID)) {
-    //        return true;
-    //    }
-
-    //    $unit = [
-    //        'userkey' => $this->uid,
-    //        'filter1' => $this->siteID,
-    //        'filter2' => $id,
-    //        'application' => 'cms',
-    //        'class' => 'category',
-    //        'priv' => '0',
-    //    ];
-    //    foreach (['create', 'update', 'delete'] as $type) {
-    //        if ($this->hasPermission("cms.category.$type", $this->siteID, $this->categoryID)) {
-    //            $unit['type'] = $type;
-    //            if (false === $this->db->insert('permission', $unit, [])) {
-    //                return false;
-    //            }
-    //        }
-    //    }
-
-    //    return true;
-    //}
-
     /**
      * Remove category data.
      *
@@ -341,7 +315,6 @@ class Category extends Template
             return \P5\File::realpath('/'.implode('/', $path));
         }
 
-        //$site_data = $this->db->select('openpath, defaultpage', 'site', 'WHERE id = ?', [$this->siteID]);
         $file_name = ($type === 1) ? '' : '/'.$this->site_data['defaultpage'];
 
         return \P5\File::realpath($this->site_data['openpath'].'/'.implode('/', $path).$file_name);
@@ -362,6 +335,13 @@ class Category extends Template
         $category_path = $this->getCategoryPath($unit['category'], 2);
 
         $static = ($type === 0) ? $this->site_data['openpath'] : '';
+        if ($type === 2) {
+            $static = $this->site_data['path'];
+        }
+        elseif ($type === 3) {
+            $static = $this->site_data['url'];
+            return \P5\Http::realuri($static.$category_path.'/'.$unit['filepath']);
+        }
 
         return \P5\File::realpath($static.$category_path.'/'.$unit['filepath']);
     }
@@ -377,9 +357,17 @@ class Category extends Template
         if (is_null($id)) {
             $id = $this->site_root;
         }
+
+        if (!$this->isAdmin() && $this->site_data['noroot'] === '1' && $id === $this->site_root) {
+            if (false !== $childCategories = $this->childCategories($id, 'id')) {
+                $id = $childCategories[0]['id'];
+            }
+        }
+
         if (empty($id)) {
             return;
         }
+
         $this->checkPermission('cms.category.read', $this->siteID, $id);
         $this->categoryID = $id;
         $this->session->param('current_category', $this->categoryID);
@@ -431,14 +419,27 @@ class Category extends Template
         $columns .= ',(SELECT COUNT(*) FROM table::entry WHERE sitekey = :site_id AND category = children.id AND revision = 0 GROUP BY category) AS cnt';
 
         if (is_null($id)) {
-            return self::rootCategory($this->db, $columns);
+            if ($this->isAdmin() || $this->site_data['noroot'] !== '1') {
+                return self::rootCategory($this->db, $columns);
+            }
+            $id = $this->site_root;
         }
 
         $parent = "(SELECT * FROM table::category WHERE id = :category_id)";
         $midparent = "(SELECT * FROM table::category WHERE sitekey = :site_id)";
         $children = $this->categoryListSQL();
 
-        return $this->db->nsmGetChildren($columns, $parent, $midparent, $children, 'AND children.id IS NOT NULL', ['site_id' => $this->siteID, 'category_id' => $id]);
+        $sort = ' ORDER BY children.priority';
+        $list = (array)$this->db->nsmGetChildren($columns, $parent, $midparent, $children, "AND children.id IS NOT NULL$sort", ['site_id' => $this->siteID, 'category_id' => $id]);
+
+        foreach ($list as &$unit) {
+            if (!empty($unit['template'])) {
+                $unit['url'] = $this->getCategoryPath($unit['id'], 2).'/';
+            }
+        }
+        unset($unit);
+
+        return $list;
     }
 
     /**
@@ -503,7 +504,7 @@ class Category extends Template
         $build_type = $this->session->param('build_type');
         $this->session->param('build_type', 'archive');
 
-        $category = $this->categoryData($category_id,'id,title,path,filepath,template');
+        $category = $this->categoryData($category_id,'id,title,path,filepath,template,archive_format');
         $this->view->bind('current', $category);
 
         $file_name = pathinfo($this->site_data['defaultpage'], PATHINFO_FILENAME);
@@ -711,7 +712,7 @@ class Category extends Template
 
         $list = (array)$this->db->select('*', 'entry', $statement, $options);
 
-        foreach ($list as $unit) {
+        foreach ($list as &$unit) {
             $unit['url'] = \P5\Http::realuri($this->site_data['path'].$this->getEntryPath($unit['id'], 2));
             $unit['html_id'] = $this->pathToID($unit['url']);
         }
@@ -740,9 +741,13 @@ class Category extends Template
         $statement = 'sitekey = ? AND active = ?';
         $options = [$this->siteID, 1];
 
-        if (empty($chroot)) {
+        if (is_null($chroot)) {
             $chroot = $this->session->param('current_build_category');
         }
+        elseif ($chroot === '0' || $chroot === 0) {
+            $chroot = self::rootCategory($this->db);
+        }
+
         $stat = "WHERE sitekey = ?";
         $opt = [$this->siteID];
 
@@ -845,7 +850,7 @@ class Category extends Template
 
         $list = (array)$this->db->select('*', 'entry', "WHERE $statement", $options);
         foreach ($list as &$unit) {
-            $unit['url'] = \P5\Http::realuri($this->site_data['path'].$this->getEntryPath($unit['id'], 2));
+            $unit['url'] = \P5\Http::realuri($this->getEntryPath($unit['id'], 2));
             $unit['html_id'] = $this->pathToID($unit['url']);
 
             // Custom fields
@@ -946,24 +951,17 @@ class Category extends Template
             $limit = " LIMIT $limit";
         }
 
-        $statement = 'WHERE sitekey = ? AND kind = ? AND name LIKE ?';
+        $statement = 'WHERE sitekey = ? AND kind = ? AND name LIKE ? AND relkey = ?';
         $options = [$this->siteID, $kind, 'file.%', $entrykey];
-        if ($this->session->param('ispreview') === 1) {
-            $statement .= ' AND relkey IN(?,?)';
-            $options[] = '0';
-        } else {
-            $statement .= ' AND relkey = ?';
-        }
 
-        if ($this->session->param('ispreview') === 1) {
-            $statement = "WHERE sitekey = ? AND kind = ? AND relkey IN(?,?) AND name LIKE ?";
-            $options = [$this->siteID, $kind, 0, $entrykey, 'file.%'];
-        }
-
-        $list = (array)$this->db->select(
+        $list = $this->db->select(
             'id, data AS path, mime, alternate, note', 'custom',
             "$statement ORDER BY `sort`$limit", $options
         );
+
+        if (false === $list) {
+            return null;
+        }
 
         $upload_dir = \P5\File::realpath('/'.$this->site_data['uploaddir']);
         $dir = $this->site_data['openpath'];
@@ -981,9 +979,9 @@ class Category extends Template
 
             if ($this->session->param('ispreview') === 1) {
                 $basename = basename($data['path']);
-                $preview_file = "$upload_dir/preview/$basename";
+                $preview_file = ltrim("$upload_dir/preview/$basename", '/');
                 if (file_exists("$dir/$preview_file")) {
-                    $data['path'] = $preview_file;
+                    $data['path'] = $this->site_data['path'] . $preview_file;
 
                     // Thumbnail
                     $thumbnails = glob("$dir/$preview_file*".parent::THUMBNAIL_EXTENSION);
@@ -1110,7 +1108,7 @@ class Category extends Template
             $data[$unit['name']] = $unit['data'];
         }
 
-        $data['url'] = $this->getCategoryPath($data['id'], 2).'/';
+        $data['url'] = $this->getCategoryPath($id, 2).'/';
         $data['html_id'] = $this->pathToID($data['url']);
 
         return $data;
@@ -1371,15 +1369,18 @@ class Category extends Template
         return true;
     }
 
-    public function archivesByYear($category_id = null)
+    public function archivesByYear($category_id = null, $archive_format = '%Y')
     {
-        $options = [1];
+        $options = [$archive_format, 1];
         $filter = (empty($category_id)) ? '' : ' AND category = ?';
+        $url = $this->site_data['path'];
         if ($filter !== '') {
             $options[] = $category_id;
+            $url = $this->getCategoryPath($category_id, 2);
         }
         $sql = $this->db->build(
-            "SELECT DATE_FORMAT(author_date, '%Y') AS year
+            "SELECT DATE_FORMAT(author_date, '%Y') AS year,
+                    DATE_FORMAT(author_date, ?) AS `format`
                FROM table::entry
               WHERE active = ? $filter
               GROUP BY year
@@ -1388,8 +1389,16 @@ class Category extends Template
         );
 
         if (false !== $this->db->query($sql)) {
-            return $this->db->fetchAll();
+            $list = (array)$this->db->fetchAll();
+            $file_extension = pathinfo($this->site_data['defaultpage'], PATHINFO_EXTENSION);
+            foreach ($list as &$unit) {
+                $unit['url'] = rtrim($url, '/') . "/{$unit['format']}.$file_extension";
+            }
+            unset($unit);
+
+            return $list;
         }
+        trigger_error($this->db->error());
     }
 
     protected function moveCategory($self, $new_parent)
@@ -1436,7 +1445,9 @@ class Category extends Template
     protected function bindSiteData($path)
     {
         $site = $this->site_data;
-        $path = preg_replace('/^'.preg_quote($site['path'],'/').'/', '', $path);
+        if (isset($site['path'])) {
+            $path = preg_replace('/^'.preg_quote($site['path'],'/').'/', '', $path);
+        }
         $dir = dirname("$path.");
         if ($dir !== '' && $dir !== '.' && $dir !== '/') {
             $dirs = explode('/', $dir);

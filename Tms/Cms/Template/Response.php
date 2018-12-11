@@ -42,7 +42,7 @@ class Response extends \Tms\Cms\Template
         $templates = $this->db->select(
             'id ,title, kind, create_date, modify_date',
             'template',
-            'WHERE sitekey = ? AND revision = ? ORDER BY kind',
+            'WHERE sitekey = ? AND revision = ? ORDER BY kind, modify_date DESC',
             [$this->siteID, 0]
         );
         $this->view->bind('templates', $templates);

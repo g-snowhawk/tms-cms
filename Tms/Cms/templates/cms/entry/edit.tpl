@@ -1,8 +1,15 @@
 {% extends "master.tpl" %}
 
 {% block head %}
-  <link rel="stylesheet" href="style/cms/default.css">
-  <script src="script/custom_selector.js"></script>
+  <template id="popup-note">
+    <div class="popup"><b>説明文</b><textarea name="note[]"></textarea></div>
+  </template>
+  <template id="choices-input">
+    <div class="choices-input">
+      <input type="text" name="form_choices[]" class="normal">
+      <button type="button" class="choices-remove">Delete</button>
+    </div>
+  </template>
 {% endblock %}
 
 {% block main %}
@@ -29,7 +36,7 @@
     </div>
     <nav class="insert">
       <a href="#body" data-insert="link">リンク挿入</a>
-      <a href="#body" data-insert="image">画像挿入</a>
+      <a href="#body" data-insert="image" data-upload="cms.entry.receive:ajaxUploadImage" data-delete="cms.entry.receive:ajaxDeleteImage" data-list="cms.entry.response:ajaxImageList" data-confirm="この画像を削除します。よろしいですか？">画像挿入</a>
     </nav>
 
     <div class="fieldset">
@@ -87,12 +94,24 @@
         alert('テンプレートが登録されていません。\n先にエントリ用のテンプレートを追加してください');
       </script>
     {% endfor %}
-    <div class="fieldset">
+
+    {% if err.vl_release_period > 0 %}
+    <div class="error">
+      {% if err.vl_release_period == 1 %}
+      <i>開始日は0000/00/00 00:00形式で入力してください</i>
+      {% elseif err.vl_release_period == 2 %}
+      <i>終了日は0000/00/00 00:00形式で入力してください</i>
+      {% elseif err.vl_release_period == 3 %}
+      <i>終了日は開始日より後を入力してください</i>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="fieldset{% if err.vl_release_period > 0 %} invalid{% endif %}">
       <div class="legend">公開オプション</div>
       <fieldset>
-        <label><input type="radio" name="publish" value="draft"{% if post.publish == 'draft' %} checked{% endif %}>保存のみ</label>
-        <label><input type="radio" name="publish" value="release"{% if post.publish == 'release' %} checked{% endif %}>公開</label>
-        <label><input type="radio" name="publish" value="private"{% if post.publish == 'private' %} checked{% endif %}>非公開</label>
+        <label title="変更内容はWEBサイトに反映されません"><input type="radio" name="publish" value="draft"{% if post.publish == 'draft' %} checked{% endif %}>下書き保存</label>
+        <label title="WEBサイトに投稿を公開します"><input type="radio" name="publish" value="release"{% if post.publish == 'release' %} checked{% endif %}>公開</label>
+        <label title="WEBサイトに公開中の投稿を非表示にします"><input type="radio" name="publish" value="private"{% if post.publish == 'private' %} checked{% endif %}>公開停止</label>
       </fieldset>
     </div>
 
@@ -117,11 +136,9 @@
         <p class="create function-key"><a href="?mode=cms.section.response:edit&amp;eid={{ post.id }}" class="small-button"><i>+</i>セクション追加</a></p>
       </section>
     {% endif %}
-    <div class="metadata">
-      登録日：{{ post.create_date|date('Y年n月j日 H:i') }}<input type="hidden" name="create_date" value="{{ post.create_date }}"><br>
-      更新日：{{ post.modify_date|date('Y年n月j日 H:i') }}<input type="hidden" name="modify_date" value="{{ post.modify_date }}"><br>
-      編集日：<input type="datetime-local" name="author_date" id="author_date" value="{{ post.author_date|date('Y-m-d\\TH:i') }}" class="normal">
-    </div>
+
+    {% include 'edit_form_metadata.tpl' %}
+
     <div class="form-footer">
       <input type="submit" name="preview" value="プレビュー">
       <input type="submit" name="s1_submit" value="保存">

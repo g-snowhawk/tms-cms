@@ -55,58 +55,11 @@
   display: none;
 }
 
-/**
- * Only for entry default
- */
-#entry-default #category-form {
-  background: #369;
-  bottom: 32px;
-  box-sizing: border-box;
-  left: 0;
-  max-width: 460px;
-  overflow: hidden;
-  padding: 0 16px;
-  position: absolute;
-  transition: height .4s ease-in;
-  width: 100%;
-}
-#entry-default #category-form h2 {
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 200;
-  margin: 4px 0;
-}
-#entry-default #category-form .fieldset {
-  margin: 4px 0;
-}
-#entry-default #category-form .fieldset label {
-  width: 90px;
-}
-#entry-default #category-form .form-footer {
-  margin: 4px 0;
-  text-align: right;
-}
-#entry-default .list td:first-child {
-  padding: 4px 8px;
-}
-#entry-default .list tbody td:first-child {
-  padding: 0 8px;
-}
-#entry-default .list tbody td:first-child a {
-  background: transparent none no-repeat 0px 50%;
-  background-size: 20px 20px;
-  display: inline-block;
-  padding: 4px 0px 4px 24px;
-}
-#entry-default .list tbody tr.category td:first-child a {
-  background-image: url(icon_folder.svg);
-}
-
-#entry-edit #body {
+html.entry-edit #body {
   -khtml-user-drag: element;
   height: 300px;
 }
-#entry-edit #previewScreen {
+html.entry-edit #previewScreen {
   background-color: #fff;
   bottom: 0;
   left: 0;
@@ -115,12 +68,12 @@
   top: 25px;
   z-index: 8;
 }
-#entry-edit #previewScreen iframe {
+html.entry-edit #previewScreen iframe {
   border: 0 none;
   height: 100%;
   width: 100%;
 }
-#entry-edit #previewControler {
+html.entry-edit #previewControler {
   bottom: 0;
   left: 0;
   padding: 8px;
@@ -129,7 +82,7 @@
   text-align: center;
   z-index: 9;
 }
-#entry-edit #previewControler input {
+html.entry-edit #previewControler input {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -145,8 +98,8 @@
   padding: 0px 12px;
   transition: background-color .5s ease;
 }
-#entry-edit #previewControler input:focus,
-#entry-edit #previewControler input:hover {
+html.entry-edit #previewControler input:focus,
+html.entry-edit #previewControler input:hover {
   background-color: rgba(0,0,0,.8);
 }
 

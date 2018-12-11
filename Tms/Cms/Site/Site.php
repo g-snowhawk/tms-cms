@@ -75,6 +75,8 @@ class Site extends \Tms\Cms
         $site_data['uploaddir'] = trim($site_data['uploaddir'],'/');
         $site_data['styledir'] = trim($site_data['styledir'],'/');
 
+        $site_data['owner'] = $this->ownerInfo($id);
+
         return $site_data;
     }
 
@@ -181,7 +183,7 @@ class Site extends \Tms\Cms
         $this->session->clear('current_category');
         $this->app->logger->log("Selected site `{$id}'");
         $this->siteID = $id;
-        $this->site_data = $this->db->get('*', 'site', 'id = ?', [$this->siteID]);
+        $this->site_data = $this->loadSiteData($id);
     }
 
     /**
@@ -261,8 +263,8 @@ class Site extends \Tms\Cms
             'template' => $template,
             'path' => '/',
             'title' => 'Site Root',
-            'lft' => $previout_rgt + 1,
-            'rgt' => $previout_rgt + 2,
+            'lft' => $previous_rgt + 1,
+            'rgt' => $previous_rgt + 2,
         ];
         $raw = [
             'create_date' => 'CURRENT_TIMESTAMP',
@@ -380,6 +382,26 @@ class Site extends \Tms\Cms
             $owner = $this->db->get('userkey', 'site', 'id=?', [$sitekey]);
         }
         return $owner === $this->uid;
+    }
+
+    /**
+     * Site owner detail
+     *
+     * @param int sitekey
+     *
+     * @return mixed
+     */
+    public function ownerInfo($sitekey)
+    {
+        $owner = $this->db->get('userkey', 'site', 'id = ?', [$sitekey]);
+        $owner_info = $this->db->get(
+            'id,email,company,division,fullname,fullname_rubi,url,zip,state,city,town,address1,address2,tel,fax',
+            'user', 'id = ?', [$owner]
+        );
+
+        // Aliases
+
+        return $owner_info;
     }
 
     /**
@@ -515,6 +537,14 @@ class Site extends \Tms\Cms
         ) {
             return true;
         }
+
+        if (   $type === 'create'
+            && !$this->isRoot()
+            && $this->app->cnf('application:cms_site_creator') === 'rootonly'
+        ) {
+            return false;
+        }
+
         parent::checkPermission($type, $filter1, $filter2);
     }
 
@@ -523,15 +553,12 @@ class Site extends \Tms\Cms
         $path = implode(
             DIRECTORY_SEPARATOR,
             array_filter([
-                $this->site_data['openpath'],
-                $this->site_data['uploaddir'],
+                rtrim($this->site_data['openpath'], '/'),
+                rtrim($this->site_data['uploaddir'], '/'),
                 $entrykey,
                 $sectionkey
             ])
         );
-        //if (!is_dir($path)) {
-        //    \P5\File::mkdir($path);
-        //}
 
         return $path;
     }

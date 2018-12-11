@@ -87,6 +87,7 @@ class Template extends \Tms\Cms\Site
                 );
             }
         } else {
+            $old_path = $this->templatePath($id, $this->siteID);
             $result = $this->db->update($table, $save, 'id = ?', [$post['id']], $raw);
         }
 
@@ -95,6 +96,9 @@ class Template extends \Tms\Cms\Site
             if ($modified) {
                 if ($this->request->param('publish') === 'release') {
                     $copy = ($result > 0);
+                    if (!empty($old_path) && file_exists($old_path)) {
+                        unlink($old_path);
+                    }
                     if (false === $this->buildTemplate($post, $copy)) {
                         $result = false;
                     }

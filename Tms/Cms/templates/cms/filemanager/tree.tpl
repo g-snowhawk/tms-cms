@@ -5,7 +5,7 @@
     {% if loop.first %}
       <ul>
     {% endif %}
-    <li><a href="?mode=cms.filemanager.receive:setDirectory&amp;path={{ folder.path|url_encode }}" class="drop-target{% if folder.path == session.current_dir %} current{% endif %}" data-drop-path="{{ folder.path|url_encode }}">・{{ folder.name }}</a>
+    <li><a href="?mode=cms.file-manager.receive:set-directory&amp;path={{ folder.path|url_encode }}" class="drop-target{% if folder.path == session.current_dir %} current{% endif %}" data-drop-path="{{ folder.path|url_encode }}">・{{ folder.name }}</a>
     {% if folder.name is not null %}
       {{ self.recursion(folder.name, folder.parent) }}
     {% endif %}

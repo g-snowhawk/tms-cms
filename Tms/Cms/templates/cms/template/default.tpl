@@ -1,8 +1,7 @@
 {% extends "master.tpl" %}
 
 {% block head %}
-  <script src="script/fix_thead_vertical_scroll.js"></script>
-  <link rel="stylesheet" href="style/cms/default.css">
+  <script src="{{ config.global.assets_path }}script/fix_thead_vertical_scroll.js"></script>
 {% endblock %}
 
 {% block main %}
@@ -57,7 +56,10 @@
       <div class="footer-controls">
         <nav class="links">
           {% if apps.hasPermission('cms.template.create') %}
-            <a href="?mode=cms.template.response:edit"><i>+</i>新規テンプレート</a>
+            <a href="?mode=cms.template.response:edit"><mark>+</mark>新規テンプレート</a>
+          {% endif %}
+          {% if apps.hasPermission('root') %}
+            <a href="?mode=cms.template.receive:export" class="post-request">エクスポート</a>
           {% else %}
             <span>&nbsp;</span>
           {% endif %}

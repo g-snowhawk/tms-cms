@@ -1,33 +1,46 @@
 {% extends "master.tpl" %}
 
 {% block head %}
-  <script src="script/fix_thead_vertical_scroll.js"></script>
-  <script src="script/subform.js"></script>
-  <script src="script/cms/explorer.js"></script>
-  <link rel="stylesheet" href="style/cms/default.css">
+  <script src="{{ config.global.assets_path }}script/fix_thead_vertical_scroll.js"></script>
+  <script src="{{ config.global.assets_path }}script/cms/explorer.js"></script>
 {% endblock %}
 
 {% block main %}
-  <input type="hidden" name="mode" value="cms.filemanager.receive:remove">
-  <input type="hidden" name="ondrop_mode" value="cms.filemanager.receive:move">
-  <input type="hidden" name="rename_mode" value="cms.filemanager.receive:rename">
+  <input type="hidden" name="mode" value="cms.file-manager.receive:remove">
+  <input type="hidden" name="ondrop_mode" value="cms.file-manager.receive:move">
+  <input type="hidden" name="rename_mode" value="cms.file-manager.receive:rename">
   <div class="explorer">
     <div class="explorer-sidebar resizable" data-minwidth="120">
       <div class="tree">
         <h1 class="headline">フォルダ一覧</h1>
         <nav>
           <ul>
-            <li><a href="?mode=cms.filemanager.receive:setDirectory&amp;path=" class="drop-target{% if session.current_dir is empty %} current{% endif %}" data-drop-path="">・Site Root</a>
-              {% import "cms/filemanager/tree.tpl" as tree %}
-              {{ tree.recursion(null, null) }}
-            </li>
+            {% if apps.isAdmin() or site.noroot != '1' %}
+              <li><a href="?mode=cms.file-manager.receive:set-directory&amp;path=" class="drop-target{% if session.current_dir is empty %} current{% endif %}" data-drop-path="">・Site Root</a>
+            {% endif %}
+            {% import "cms/filemanager/tree.tpl" as tree %}
+            {{ tree.recursion(null, null) }}
+            {% if apps.isAdmin() or site.noroot != '1' %}
+              </li>
+            {% endif %}
           </ul>
         </nav>
       </div>
     </div>
     <div class="explorer-mainframe">
       <div class="explorer-list">
-        <h2 class="headline">ファイル一覧</h2>
+        <h2 class="headline">ファイル一覧
+          {% for dir in cwd %}
+            {% set path = path is defined ? [path, dir]|join('/') : dir %}
+            {% if loop.first %}
+              <span class="breadcrumbs">
+            {% endif %}
+            <a href="?mode=cms.file-manager.receive:set-directory&amp;path={{ path|url_encode }}">{{ dir }}</a>
+            {% if loop.last %}
+              </span>
+            {% endif %}
+          {% endfor %}
+        </h2>
         <table class="ftv-table">
           <thead>
             <tr>
@@ -41,7 +54,7 @@
           {% for unit in files %}
             <tr class="{{ unit.kind }}">
               {% if unit.kind == 'folder' %}
-                <td class="link spacer with-icon"><a href="?mode=cms.filemanager.receive:setDirectory&amp;path={{ unit.path|url_encode }}" class="renamable">{{ unit.name }}</a></td>
+                <td class="link spacer with-icon"><a href="?mode=cms.file-manager.receive:set-directory&amp;path={{ unit.path|url_encode }}" class="renamable">{{ unit.name }}</a></td>
               {% else %}
                 <td class="link spacer with-icon"><span class="renamable">{{ unit.name }}</span></td>
               {% endif %}
@@ -59,8 +72,8 @@
         </table>
         <div class="footer-controls">
           <nav class="links">
-            <a href="?mode=cms.filemanager.response:addfolder" class="subform-opener"><i class="mark">+</i>新規フォルダ</a>
-            <a href="?mode=cms.filemanager.response:addfile" class="subform-opener"><i class="mark">+</i>新規ファイル</a>
+            <a href="?mode=cms.file-manager.response:add-folder" class="subform-opener"><i class="mark">+</i>新規フォルダ</a>
+            <a href="?mode=cms.file-manager.response:add-file" class="subform-opener"><i class="mark">+</i>新規ファイル</a>
           </nav>
           <nav class="pagination">
             {% include 'pagination.tpl' %}

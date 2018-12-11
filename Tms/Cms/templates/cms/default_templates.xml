@@ -21,6 +21,28 @@
     <active>1</active>
   </template>
   <template>
+    <title>エントリ・汎用テンプレート</title>
+    <sourcecode><![CDATA[{% extends 'master.tpl' %}
+
+{% block main %}
+{% import _self as self %}
+{% import 'attachments.tpl' as macro1 %}
+{% import 'sections.tpl' as macro2 %}
+<article>
+  <h1>{{ current.title }}</h1>
+  <div class="detail">
+    {{ current.body|markdown }}
+    {{ macro1.attachments(apps.attachments(current.id)) }}
+  </div>
+  {{ macro2.sectionblock(current.identifier, null) }}
+</article>
+{% endblock %}]]>
+    </sourcecode>
+    <kind>2</kind>
+    <path>entry</path>
+    <active>1</active>
+  </template>
+  <template>
     <title>アーカイブ・汎用テンプレート</title>
     <sourcecode><![CDATA[{% extends 'master.tpl' %}
 
@@ -41,66 +63,6 @@
     <active>1</active>
   </template>
   <template>
-    <title>エントリ・汎用テンプレート</title>
-    <sourcecode><![CDATA[{% extends 'master.tpl' %}
-
-{% macro attachments(files) %}
-  {% for file in files %}
-    {% if loop.first %}
-      <div class="attachments">
-        <ul>
-    {% endif %}
-    {% if 'image/' in file.mime %}
-      <li class="image"><img src="{{ file.path }}" alt="{{ file.alternate }}">
-    {% else %}
-      <li class="file">
-        <a href="{{ file.path }}" target="_blank">{{ file.alternate }}</a>
-    {% endif %}
-    {% if file.note is not empty %}
-      <div class="caption">{{ file.note|nl2br }}</div>
-    {% endif %}
-    </li>
-    {% if loop.last %}
-        </ul>
-      </div>
-    {% endif %}
-  {% endfor %}
-{% endmacro attachments %}
-
-{% macro recursion(eid, i) %}
-  {% import _self as self %}
-  {% set sections = apps.sections(eid,i) %}
-  {% for item in sections %}
-    <section>
-      <h{{ item.level }}>{{ item.title }}</h{{ item.level }}>
-      <div class="detail">
-        {{ item.body|markdown }}
-        {{ self.attachments(apps.attachments(item.id,'section')) }}
-      </div>
-      {% if item.id is not empty %}
-        {{ self.recursion(eid,item.id) }}
-      {% endif %}
-    </section>
-  {% endfor %}
-{% endmacro recursion %}
-
-{% block main %}
-{% import _self as self %}
-<article>
-  <h1>{{ current.title }}</h1>
-  <div class="detail">
-    {{ current.body|markdown }}
-    {{ self.attachments(apps.attachments(current.id)) }}
-  </div>
-  {{ self.recursion(current.identifier, null) }}
-</article>
-{% endblock %}]]>
-    </sourcecode>
-    <kind>2</kind>
-    <path>entry</path>
-    <active>1</active>
-  </template>
-  <template>
     <title>マスター・テンプレート</title>
     <sourcecode><![CDATA[<!DOCTYPE html>
 <html lang="ja" class="{{ html_class }}" id="{{ html_id }}">
@@ -116,7 +78,7 @@
   <title>{{ site.title }} - {{ current.title }}</title>
   {% set styles = apps.styleSheets() %}
   {% for style in styles %}
-    <link rel="stylesheet" href="{{ site.relative }}{{ style }}">
+    <link rel="stylesheet" href="{{ site.path }}{{ style }}">
   {% else %}
     <!-- NONE STYLE -->
   {% endfor %}
@@ -156,13 +118,13 @@
       <nav id="global-nav">
         {% import "global-nav.tpl" as navi %}
         {{ navi.recursion(apps.site_root) }}
-        {% if build_type == 'archive' and current.id != apps.site_root %}
-          {% set years = apps.archivesByYear(current.id) %}
+        {% if build_type == 'archive' and current.archive_format is not empty %}
+          {% set years = apps.archivesByYear(current.id, current.archive_format) %}
           {% for unit in years %}
             {% if loop.first %}
               <ul>
             {% endif %}
-            <li><a href="?aby={{ unit.year }}">{{ unit.year }}</a></li>
+            <li><a href="{{ unit.url }}">{{ unit.year }}</a></li>
             {% if loop.last %}
               </ul>
             {% endif %}
@@ -183,7 +145,7 @@
     <title>ナビゲーション</title>
     <sourcecode><![CDATA[{% macro recursion(i) %}
   {% import _self as self %}
-  {% set category = apps.filterCategories(i) %}
+  {% set category = apps.childCategories(i) %}
   {% for item in category %}
     {% if loop.first %}
       <ul>
@@ -201,6 +163,59 @@
     </sourcecode>
     <kind>5</kind>
     <path>global-nav</path>
+    <active>1</active>
+  </template>
+  <template>
+    <title>添付ファイル</title>
+    <sourcecode><![CDATA[{% macro attachments(files) %}
+  {% for file in files %}
+    {% if loop.first %}
+      <div class="attachments">
+        <ul>
+    {% endif %}
+    {% if 'image/' in file.mime %}
+      <li class="image"><img src="{{ file.path }}" alt="{{ file.alternate }}">
+    {% else %}
+      <li class="file">
+        <a href="{{ file.path }}" target="_blank">{{ file.alternate }}</a>
+    {% endif %}
+    {% if file.note is not empty %}
+      <div class="caption">{{ file.note|nl2br }}</div>
+    {% endif %}
+    </li>
+    {% if loop.last %}
+        </ul>
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endmacro %}]]>
+    </sourcecode>
+    <kind>5</kind>
+    <path>attachments</path>
+    <active>1</active>
+  </template>
+  <template>
+    <title>セクション</title>
+    <sourcecode><![CDATA[{% macro sectionblock(eid, i) %}
+  {% import 'attachments.tpl' as macro1 %}
+  {% import _self as macro2 %}
+  {% set sections = apps.sections(eid,i) %}
+  {% for item in sections %}
+    <section>
+      <h{{ item.level }}>{{ item.title }}</h{{ item.level }}>
+      <div class="detail">
+        {{ item.body|markdown }}
+        {{ macro1.attachments(apps.attachments(item.id,'section')) }}
+      </div>
+      {% if item.id is not empty %}
+        {{ macro2.sectionblock(eid,item.id) }}
+      {% endif %}
+    </section>
+  {% endfor %}
+{% endmacro %}]]>
+    </sourcecode>
+    <kind>5</kind>
+    <path>sections</path>
     <active>1</active>
   </template>
   <template>
@@ -247,8 +262,11 @@ header p a {
 }
 
 .breadcrumbs {
+  box-sizing: border-box;
   font-size: .8rem;
-  margin: 1rem;
+  margin: auto;
+  max-width: 1024px;
+  padding: 1em;
 }
 .breadcrumbs span.separator {
   font-style: italic;
@@ -295,6 +313,14 @@ article hr {
   height: 0;
 }
 
+.attachments ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+.attachments li {
+  margin: 1em auto;
+}
 .attachments img {
   max-width: 100%;
 }]]>

@@ -3,9 +3,9 @@
   {% set category = apps.childCategories(i) %}
   {% for item in category %}
     {% if loop.first %}
-      <ul>
+    <ul{% if i is empty %} class="select-root"{% endif %}>
     {% endif %}
-    <li><label><input type="{{ type }}" name="{{ name }}" value="{{ item.id }}"{% if item.id == session.current_category %} checked{% endif %}><span>✓</span><span class="pulldown">{{ item.title }}</span></label>
+    <li class="select-item" data-path="{{ item.path }}"><label><input type="{{ type }}" name="{{ name }}" value="{{ item.id }}"{% if item.id == post[name] or item.id == session.current_category %} checked{% endif %} data-template="{{ item.default_template }}"><span>✓</span><span class="pulldown">{{ item.title }}</span></label>
     {% if item.id is not null %}
       {{ self.recursion(item.id, type, name) }}
     {% endif %}

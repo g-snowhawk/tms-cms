@@ -1,10 +1,5 @@
 {% extends "master.tpl" %}
 
-{% block head %}
-  <link rel="stylesheet" href="style/cms/default.css">
-  <script src="script/custom_selector.js"></script>
-{% endblock %}
-
 {% block main %}
   <p id="backlink"><a href="?mode=cms.entry.response">一覧に戻る</a></p>
   <div class="wrapper">
@@ -97,11 +92,8 @@
       <span class="unit">{{ site.defaultextension }}</span>
     </div>
 
-    <div class="metadata">
-      登録日：{{ post.create_date|date('Y年n月j日 H:i') }}<input type="hidden" name="create_date" value="{{ post.create_date }}"><br>
-      更新日：{{ post.modify_date|date('Y年n月j日 H:i') }}<input type="hidden" name="modify_date" value="{{ post.modify_date }}"><br>
-      編集日：<input type="datetime" name="author_date" id="author_date" value="{{ post.author_date }}" class="normal">
-    </div>
+    {% include 'edit_form_metadata.tpl' %}
+
     <div class="form-footer">
       <input type="submit" name="s1_submit" value="保存">
       <input type="hidden" name="mode" value="cms.category.receive:save">

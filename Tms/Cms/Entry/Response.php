@@ -43,19 +43,27 @@ class Response extends \Tms\Cms\Entry
         $reserved = $this->db->get('reserved', 'category', 'id=?', [$this->session->param('current_category')]);
         if ($reserved === '1') {
             if (!is_null($this->session->param('escape_current_category'))) {
-                $this->session->param(
-                    'current_category',
-                    $this->session->param('escape_current_category')
-                );
+                $this->setCategory($this->session->param('escape_current_category'));
                 $this->session->clear('escape_current_category');
             }
             else {
-                $this->session->param('current_category', $this->site_root);
+                $this->setCategory();
             }
             $this->setCategory($this->session->param('current_category'));
         }
 
         $sql = file_get_contents('Tms/Cms/Entry/default.sql', FILE_USE_INCLUDE_PATH);
+
+        // Sort order
+        $sort_option = '';
+        if ($this->session->param('cms_entry_list_order')) {
+            $sort_option = ','.$this->session->param('cms_entry_list_order');
+        }
+        elseif ($this->app->cnf('application:cms_entry_list_order')) {
+            $sort_option = ','.$this->app->cnf('application:cms_entry_list_order');
+        }
+        $sql = str_ireplace('{{ sort_option }}', $sort_option, $sql);
+
         $entry = $this->db->getAll($sql, ['user_id' => $this->uid, 'site_id' => $this->siteID, 'category_id' => $this->categoryID, 'revision' => 0]);
         $this->view->bind('entries', $entry);
 
@@ -70,7 +78,7 @@ class Response extends \Tms\Cms\Entry
         if ($this->isAjax) {
             return $this->view->render('cms/entry/default.tpl', true);
         }
-        $this->view->render('cms/entry/default.tpl');
+        parent::defaultView('cms-entry-default');
     }
 
     /**
@@ -81,7 +89,7 @@ class Response extends \Tms\Cms\Entry
         if (!is_null($this->request->param('rel'))) {
             $eid = $this->request->param('rel');
             $cid = $this->db->get('category', 'entry', 'id = ?', [$eid]);
-            $this->session->param('current_category', $cid);
+            $this->setCategory($cid);
             $this->request->param('id', $eid);
             $this->request->param('rel', null, true);
         }
@@ -91,7 +99,7 @@ class Response extends \Tms\Cms\Entry
 
         if (!is_null($this->request->param('ccp'))) {
             $cid = $this->db->get('id', 'category', 'path=?', [$this->request->param('ccp')]);
-            $this->session->param('current_category', $cid);
+            $this->setCategory($cid);
         }
 
         if ($check === 'update') {
@@ -142,7 +150,9 @@ class Response extends \Tms\Cms\Entry
                 $post['template'] = $this->db->get('default_template', 'category', 'sitekey = ? AND id = ?', [$this->siteID, $this->session->param('current_category')]);
             }
         }
-        $post['publish'] = 'draft';
+        if (empty($post['publish'])) {
+            $post['publish'] = 'draft';
+        }
         if (empty($post['filepath'])) {
             $post['filepath'] = 'doc'.date('ymdhis').$this->site_data['defaultextension'];
         }
@@ -154,6 +164,19 @@ class Response extends \Tms\Cms\Entry
         );
         foreach ((array) $customs as $unit) {
             $post[$unit['name']] = $unit['data'];
+        }
+
+        // Convert datetime
+        foreach (['release_date', 'close_date', 'author_date'] as $key) {
+            if (isset($post[$key]) && !empty($post[$key])) {
+                try {
+                    $date = new \DateTime($post[$key]);
+                    $post[$key] = $date->format('Y-m-d\TH:i');
+                }
+                catch (\Exception $e) {
+                    //
+                }
+            }
         }
 
         $this->view->bind('post', $post);
@@ -187,6 +210,10 @@ class Response extends \Tms\Cms\Entry
         );
         $this->view->bind('templates', $templates);
 
+        // Revision
+        $revision = $this->db->get('revision', 'entry', 'identifier = ? AND active = ?', [$id, 1]);
+        $this->view->bind('revision', $revision);
+
         $globals = $this->view->param();
         $form = $globals['form'];
         $form['confirm'] = \P5\Lang::translate('CONFIRM_SAVE_DATA');
@@ -197,10 +224,9 @@ class Response extends \Tms\Cms\Entry
             $this->view->bind('relayentry', $this->request->param('eid'));
         }
 
-        $this->app->execPlugin('beforeRendering');
+        $this->setHtmlClass(['entry', 'entry-edit']);
 
-        $this->setHtmlId('entry-edit');
-        $this->view->render('cms/entry/edit.tpl');
+        parent::defaultView('cms-entry-edit');
     }
 
     /**

@@ -63,6 +63,10 @@ class Entry extends Category
         $valid[] = ['vl_filepath', 'filepath', 'empty'];
         $valid[] = ['vl_template', 'template', 'empty'];
         $valid[] = ['vl_description', 'description', 'disallowtags', 2];
+        $valid[] = ['vl_release_period', 'release_date', 'datetime_format', 1, 'allowempty'];
+        $valid[] = ['vl_release_period', 'close_date', 'datetime_format', 2, 'allowempty'];
+        $valid[] = ['vl_release_period', 'close_date', 'gt_datetime', 3, $post['release_date'], 'allowempty'];
+        $valid[] = ['vl_author_date', 'author_date', 'datetime_format', 1, 'allowempty'];
 
         if (!$this->validate($valid)) {
             return false;
@@ -128,6 +132,16 @@ class Entry extends Category
 
             if ($modified !== false && $file_count !== false && $custom_count !== false) {
                 $result += $file_count + $custom_count;
+
+                $plugin_result = $this->app->execPlugin('afterSave', $post);
+                foreach($plugin_result as $plugin_count) {
+                    if (false === $plugin_count) {
+                        $result = false;
+                        break;
+                    }
+                    $result += (int)$plugin_count;
+                }
+
                 if ($this->request->param('publish') === 'release') {
                     $status = $this->db->get('status', 'entry', 'id = ?', [$post['id']]);
                     $copy = ($result > 0 || $status !== 'release');
@@ -155,7 +169,16 @@ class Entry extends Category
             if ($result !== false) {
                 $this->app->logger->log("Save the entry `{$id}'", 101);
 
-                return $this->db->commit();
+                $commit = $this->db->commit();
+
+                $plugin_result = $this->app->execPlugin('completeSave', $post);
+                foreach($plugin_result as $result) {
+                    if (false === $result) {
+                        return false;
+                    }
+                }
+
+                return $commit;
             }
         } else {
             trigger_error($this->db->error());
@@ -245,13 +268,13 @@ class Entry extends Category
                     continue;
                 }
 
+                // Convert encoding multibyte characters
+                if (mb_strlen($name) !== mb_strwidth($name)) {
+                    $name = \P5\Text::convert($name);
+                }
+
                 $file_name = urldecode(pathinfo(basename(urlencode($name)), PATHINFO_FILENAME));
                 $file_extension = pathinfo($name, PATHINFO_EXTENSION);
-
-                // Convert encoding multibyte characters
-                if (mb_strlen($file_name) !== mb_strwidth($file_name)) {
-                    $file_name = \P5\Text::convert($file_name);
-                }
                 $alternate = $file_name;
 
                 if ($file_name !== urlencode($file_name)) {
@@ -392,6 +415,14 @@ class Entry extends Category
             $limit = $new_version - (int) $save_count;
 
             if (false !== $deletes = $this->db->select('id', $table, "WHERE sitekey = ? AND identifier = ? AND revision > '0' AND revision < ?", [$sid, $entrykey, $limit])) {
+
+                $plugin_result = $this->app->execPlugin('beforeRemoveOldEntries', $deletes);
+                foreach($plugin_result as $plugin_count) {
+                    if (false === $plugin_count) {
+                        return false;
+                    }
+                }
+
                 foreach ($deletes as $delete) {
                     \P5\File::rmdir("$upload_dir/{$delete['id']}", true);
                     // Custom fields
@@ -412,7 +443,10 @@ class Entry extends Category
             $save = ['active' => '1'];
             foreach ($this->date_columns as $x_date) {
                 if (isset($post[$x_date])) {
-                    $save[$x_date] = date('Y-m-d H:i', \P5\Text::strtotime($post[$x_date]));
+                    // TODO: which use empty or is_null
+                    $save[$x_date] = (empty($post[$x_date]))
+                        ? NULL 
+                        : date('Y-m-d H:i', \P5\Text::strtotime($post[$x_date]));
                 }
             }
             $this->db->update($table, $save, 'identifier = ? ORDER BY revision DESC LIMIT 1', [$entrykey]);
@@ -420,10 +454,11 @@ class Entry extends Category
         }
 
         // Release sections
-        $sections = $this->db->select('id, entrykey AS eid', 'section', 'WHERE entrykey = ? AND revision = ? AND status = ?', [$entrykey, '0', 'draft']);
-        foreach ($sections as $section) {
-            if (false === $this->releaseSection($section, true)) {
-                return false;
+        if (false !== $sections = $this->db->select('id, entrykey AS eid', 'section', 'WHERE entrykey = ? AND revision = ? AND status = ?', [$entrykey, '0', 'draft'])) {
+            foreach ($sections as $section) {
+                if (false === $this->releaseSection($section, true)) {
+                    return false;
+                }
             }
         }
 
@@ -440,18 +475,15 @@ class Entry extends Category
             }
         }
 
-        // Copy attachment files
-        $identifier = $this->db->get('identifier', $table, 'id = ?', [$new_entrykey]);
-        $src = \P5\File::realpath("$upload_dir/$identifier");
-        if (is_dir($src)) {
-            $dest = \P5\File::realpath("$upload_dir/$new_entrykey");
-            if (is_dir($dest)) {
-                \P5\File::rmdir($dest, true);
-            }
-            \P5\File::copydir($src, $dest, true);
-        }
-
+        $this->copyAttachments($new_entrykey, 'entry', $upload_dir);
         $this->copyCustomFields($new_entrykey);
+
+        $plugin_result = $this->app->execPlugin('afterReleaseEntry', $new_entrykey);
+        foreach($plugin_result as $plugin_count) {
+            if (false === $plugin_count) {
+                return false;
+            }
+        }
 
         if ($this->siteProperty('type') === 'static') {
             try {
@@ -564,18 +596,7 @@ class Entry extends Category
             $sectionkey = $this->db->get('id', $table, 'identifier = ? AND active = 1', [$id]);
         }
 
-        // Copy attachment files
-        $identifier = $this->db->get('identifier', $table, 'id = ?', [$sectionkey]);
-        $src = \P5\File::realpath("$upload_dir/$entrykey/$identifier");
-        if (is_dir($src)) {
-            $dest = \P5\File::realpath("$upload_dir/$entrykey/$sectionkey");
-            if (is_dir($dest)) {
-                \P5\File::rmdir($dest, true);
-            }
-            \P5\File::copydir($src, $dest, true);
-        }
-
-        // Copy custom fields
+        $this->copyAttachments($sectionkey, 'section', rtrim($upload_dir, '/') . "/$entrykey");
         $this->copyCustomFields($entrykey, $sectionkey);
 
         return $return_value;
@@ -674,7 +695,17 @@ class Entry extends Category
         }
 
         $this->db->begin();
-        if (false !== $this->db->delete('section', 'entrykey = ?', [$id])) {
+
+        $result = true;
+        $plugin_result = $this->app->execPlugin('beforeRemove', $id);
+        foreach($plugin_result as $plugin_count) {
+            if (false === $plugin_count) {
+                $result = false;
+                break;
+            }
+        }
+
+        if ($result !== false && false !== $this->db->delete('section', 'entrykey = ?', [$id])) {
             if (false !== $this->db->delete('entry', 'identifier = ?', [$id])) {
                 $this->app->logger->log("Remove the entry `{$id}'", 101);
 
@@ -704,7 +735,7 @@ class Entry extends Category
         if ($preview === true) {
             $entry = $this->request->param();
             if (!isset($entry['identifier'])) {
-                $entry['identifier'] = $entry['id'];
+                $entry['identifier'] = (isset($entry['id'])) ? $entry['id'] : $id;
             }
         }
         if ((bool) $force_db === false && isset($entry['template'])) {
@@ -1050,6 +1081,43 @@ class Entry extends Category
             $data['url'] = $this->getEntryPath($id, 1);
             $data['html_id'] = $this->pathToID($data['url']);
             return $data;
+        }
+    }
+
+    /**
+     * Copy attachment files
+     *
+     * @param int $somekey
+     * @param string $table
+     * @param string $upload_dir
+     *
+     * @return bool
+     */
+    private function copyAttachments($somekey, $table, $upload_dir)
+    {
+        $identifier = $this->db->get('identifier', $table, 'id = ?', [$somekey]);
+        $src = rtrim($upload_dir, '/') . "/$identifier";
+        if (!is_dir($src)) {
+            return false;
+        }
+        $dest = "$upload_dir/$somekey";
+        if (is_dir($dest)) {
+            \P5\File::rmdir($dest, true);
+        }
+
+        if ($table === 'section') {
+            return \P5\File::copy($src, $dest, true, 'hard');
+        }
+
+        mkdir($dest, 0777, true);
+        $files = scandir($src);
+        foreach ($files as $file) {
+            $path = "$src/$file";
+            if (is_file($path)) {
+                if (false === \P5\File::copy($path, "$dest/$file", false, 'hard')) {
+                    return false;
+                }
+            }
         }
     }
 }

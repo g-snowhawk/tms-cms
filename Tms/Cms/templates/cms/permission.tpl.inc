@@ -7,7 +7,7 @@
       <td>更新</td>
       <td>削除</td>
       <td>公開</td>
-      <td>継承</td>
+      <td>その他</td>
     </tr>
   </thead>
   <tbody>
@@ -40,7 +40,7 @@
       <td>{% if apps.userinfo.admin == 1 or priv.category.update == 1 %}<input type="checkbox" value="1" name="perm[{{ filters }}cms.category.update]" {% if post.perm[filters ~ 'cms.category.update']  == 1 %} checked{% endif %}>{% else %}-{% endif %}</td>
       <td>{% if apps.userinfo.admin == 1 or priv.category.delete == 1 %}<input type="checkbox" value="1" name="perm[{{ filters }}cms.category.delete]" {% if post.perm[filters ~ 'cms.category.delete']  == 1 %} checked{% endif %}>{% else %}-{% endif %}</td>
       <td>-</td>
-      <td>{% if apps.userinfo.admin == 1 or priv.category.upfate == 1 %}<input type="checkbox" value="1" name="perm[{{ filters }}cms.category.inherit]"{% if post.perm[filters ~ 'cms.category.inherit'] == 1 %} checked{% endif %}>{% else %}-{% endif %}</td>
+      <td>{% if apps.userinfo.admin == 1 or priv.category.upfate == 1 %}<label><input type="checkbox" value="1" name="perm[{{ filters }}cms.category.inherit]"{% if post.perm[filters ~ 'cms.category.inherit'] == 1 %} checked{% endif %}><small>継承しない</small></label>{% else %}-{% endif %}</td>
     </tr>
     <tr>
       <th>エントリ</th>

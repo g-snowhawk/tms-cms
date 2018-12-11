@@ -1,9 +1,5 @@
 {% extends "master.tpl" %}
 
-{% block head %}
-  <link rel="stylesheet" href="style/cms/default.css">
-{% endblock %}
-
 {% block main %}
   <div class="wrapper">
     <h1>登録サイト一覧</h1>

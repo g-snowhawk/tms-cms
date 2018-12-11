@@ -1,9 +1,7 @@
 {% extends "master.tpl" %}
 
 {% block head %}
-  <script src="script/fix_thead_vertical_scroll.js"></script>
-  <script src="script/subform.js"></script>
-  <link rel="stylesheet" href="style/cms/default.css">
+  <script src="{{ config.global.assets_path }}script/fix_thead_vertical_scroll.js"></script>
 {% endblock %}
 
 {% block main %}

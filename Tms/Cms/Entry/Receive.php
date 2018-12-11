@@ -23,14 +23,20 @@ class Receive extends Response
      */
     public function save()
     {
+        $redirect_type = 'redirect';
         $redirect_mode = (!empty($this->request->param('redirect_mode')))
             ? $this->request->param('redirect_mode')
             : 'cms.entry.response';
 
+        if ($referer = $this->request->param('script_referer')) {
+            $redirect_mode = $referer;
+            $redirect_type = 'referer';
+        }
+
         $message = 'SUCCESS_SAVED';
         $status = 0;
         $options = [];
-        $response = [[$this, 'redirect'], $redirect_mode];
+        $response = [[$this, 'redirect'], [$redirect_mode, $redirect_type]];
 
         if (!parent::save()) {
             $message = 'FAILED_SAVE';
@@ -165,14 +171,17 @@ class Receive extends Response
     public function setCategory($id = null)
     {
         parent::setCategory($this->request->param('id'));
-        $this->init();
-        $this->defaultView();
+        \P5\Http::redirect(
+            $this->app->systemURI().'?mode=cms.entry.response'
+        );
+        //$this->init();
+        //$this->defaultView();
     }
 
     public function ajaxUploadImage()
     {
         $response = '';
-        if ($this->saveFiles('0')) {
+        if (false !== $this->saveFiles('0')) {
             $list = $this->imageList('0');
             $response = json_encode($list);
         } else {
@@ -186,6 +195,14 @@ class Receive extends Response
     public function ajaxDeleteImage()
     {
         $id = $this->request->param('id');
+
+        $upload_dir = $this->fileUploadDir();
+        $file = $this->db->get('data', 'custom', 'id = ?', [$id]);
+        $path = $upload_dir.'/'.basename($file);
+        if (file_exists($path)) {
+            unlink($path);
+        }
+
         $response = 'Delete Failure';
         if ($this->db->delete('custom', 'id = ?', [$id])) {
             $response = json_encode(['id' => $id, 'status' => 'success']);

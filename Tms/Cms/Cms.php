@@ -44,7 +44,7 @@ class Cms extends User implements PackageInterface
             $this->command_convert = 'imagick';
         }
         else {
-            $convert = $this->cnf('external_command:convert');
+            $convert = $this->app->cnf('external_command:convert');
             if (!empty($convert)) {
                 $disable_functions = \P5\Text::explode(',', ini_get('disable_functions'));
                 if (!in_array('exec', $disable_functions)) {
@@ -172,6 +172,12 @@ class Cms extends User implements PackageInterface
 
         // Administrators have full control
         if ($this->isAdmin()) {
+            if (   $key === 'cms.site.create'
+                && !$this->isRoot()
+                && $this->app->cnf('application:cms_site_creator') === 'rootonly'
+            ) {
+                return false;
+            }
             return true;
         }
 
@@ -280,7 +286,11 @@ class Cms extends User implements PackageInterface
 
         $this->view->clearCache($path);
 
-        return file_put_contents($path, $post['sourcecode']);
+        $sourcecode = ($post['kind'] === '6')
+            ? $this->view->render($post['sourcecode'], true, true)
+            : $post['sourcecode'];
+
+        return file_put_contents($path, $sourcecode);
     }
 
     public function init()

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `TMS_site` (
   `maxentry` int(11) DEFAULT NULL,
   `maxcategory` int(11) DEFAULT NULL,
   `maxrevision` int(11) DEFAULT '0',
+  `noroot` enum('0','1') NOT NULL DEFAULT '0',
   `type` enum('static','dynamic') NOT NULL DEFAULT 'static',
   `contract` date NOT NULL,
   `expire` int(11) NOT NULL DEFAULT '1',

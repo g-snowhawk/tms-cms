@@ -28,7 +28,7 @@ class Response extends \Tms\Cms\Category
 
         $this->view->bind(
             'header',
-            ['title' => 'カテゴリ管理', 'id' => 'category', 'class' => 'category']
+            ['title' => \P5\Lang::translate('PAGE_TITLE'), 'id' => 'category', 'class' => 'category']
         );
     }
 
@@ -67,9 +67,6 @@ class Response extends \Tms\Cms\Category
             );
             if (count((array) $fetch) > 0) {
                 $post = $fetch[0];
-                if (!empty($post['author_date'])) {
-                    $post['author_date'] = date('Y年n月j日 H:i', strtotime($post['author_date']));
-                }
             }
         }
 
@@ -104,7 +101,9 @@ class Response extends \Tms\Cms\Category
     public function editSubform()
     {
         $response = $this->view->render('cms/category/subform.tpl', true);
-        if ($this->request->method === 'post') {
+        if (   $this->request->method === 'post'
+            && $this->request->post('request_type') !== 'response-subform'
+        ) {
             return $response;
         }
         $json = [

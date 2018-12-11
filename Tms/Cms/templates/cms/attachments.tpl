@@ -8,7 +8,7 @@
     <div class="file-set">
       <label class="selected">
         <span class="thumbnail">
-          <img src="{% if unit.mime == 'application/pdf' %}style/icon_pdf.svg{% else %}{{ unit.data }}{% endif %}" alt="{{ unit.alternate }}" title="{{ unit.title }}" draggable="false">
+          <img src="{% if unit.mime == 'application/pdf' %}{{ config.global.assets_path }}style/icon_pdf.svg{% else %}{{ unit.data }}{% endif %}" alt="{{ unit.alternate }}" title="{{ unit.title }}" draggable="false">
           {% if unit.mime == 'application/pdf' %}
             <span class="filename">{{ unit.alternate }}</span>
           {% endif %}

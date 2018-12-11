@@ -1,6 +1,6 @@
 SELECT children.id, children.title, NULL AS parent, NULL AS status,
        NULL AS release_date, NULL AS close_date,
-       children.create_date, children.modify_date,
+       children.create_date, children.modify_date, children.author_date,
        'category' AS kind
   FROM (SELECT * FROM table::category WHERE id = :category_id) parent
        LEFT OUTER JOIN (SELECT c1.*
@@ -22,11 +22,10 @@ SELECT children.id, children.title, NULL AS parent, NULL AS status,
                   )
    AND children.id IS NOT NULL
  UNION 
-SELECT id, title, category AS parent, status,
-       (SELECT release_date FROM table::entry WHERE identifier = entry.id AND active = '1') AS release_date,
-       (SELECT close_date FROM table::entry WHERE identifier = entry.id AND active = '1') AS close_date,
-       create_date, modify_date, 'entry' AS kind
-  FROM table::entry entry
+SELECT id, title, category AS parent, status, release_date, close_date,
+       create_date, modify_date, author_date, 'entry' AS kind
+  FROM table::entry
  WHERE sitekey = :site_id
    AND category = :category_id
    AND revision = :revision
+ ORDER BY kind{{ sort_option }}

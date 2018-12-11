@@ -54,12 +54,14 @@ class Dynamic extends Section
         $id = (isset($_SERVER['REDIRECT_URL'])) ? $this->findEntryFromURI()
                                                 : $this->findEntryFromParameter();
 
+        $this->session->param('build_type', $this->build_type);
+
         $current_page = $this->request->get('p');
         if (!empty($current_page)) {
             $this->request->param('current_page', $current_page);
         }
 
-        $plugins = $this->app->execPlugin('beforeBuild', $this->uri);
+        $plugins = $this->app->execPlugin('beforeBuild', $this->uri, $id);
 
         switch ($this->build_type) {
             case 'category':
@@ -68,10 +70,14 @@ class Dynamic extends Section
             case 'entry':
                 $source = $this->build($id, true);
                 break;
-            case 'section':
-                break;
             default :
+                $plugins = $this->app->execPlugin('buildDynamicContents', $this->uri);
+                foreach ($plugins as $plugin) {
+                    $source = $plugin;
+                    break 2;
+                }
                 trigger_error('Not found '.$this->uri, E_USER_ERROR);
+                break;
         }
 
         header('X-Frame-Options: SAMEORIGIN');

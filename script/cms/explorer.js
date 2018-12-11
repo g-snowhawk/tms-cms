@@ -108,7 +108,7 @@ Explorer.prototype.onKeyPress = function(event) {
 
 Explorer.prototype.onBlur = function(element) {
     var old = element.parentNode.querySelector('[name=oldname]');
-    if (element.value === old.value) {
+    if (element.value === old.value || element.value == '') {
         return this.rewind(old.value);
     }
 
