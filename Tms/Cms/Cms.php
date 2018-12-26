@@ -29,6 +29,7 @@ class Cms extends User implements PackageInterface
     const DEFAULT_MODE = 'cms.site.response';
     const USER_EDIT_EXTENDS = '\\Tms\\Cms\\Category';
     const THUMBNAIL_EXTENSION = '.jpg';
+    const DEFAULT_TEMPLATES_XML_PATH = 'cms/default_templates.xml';
 
     protected $command_convert = null;
 

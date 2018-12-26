@@ -292,7 +292,7 @@ class Site extends \Tms\Cms
         ini_set('include_path', implode(PATH_SEPARATOR, $my_include_path));
 
         try {
-            $xml_source = file_get_contents('cms/default_templates.xml', FILE_USE_INCLUDE_PATH);
+            $xml_source = file_get_contents(parent::DEFAULT_TEMPLATES_XML_PATH, FILE_USE_INCLUDE_PATH);
             if (false === $xml = simplexml_load_string($xml_source)) {
                 throw new \ErrorException('Failed to parse XML');
             }

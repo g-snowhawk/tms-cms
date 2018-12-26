@@ -90,7 +90,7 @@ class Receive extends Response
         }
         $xml .= '</templates>';
 
-        $filename = 'default_template.xml';
+        $filename = basename(parent::DEFAULT_TEMPLATES_XML_PATH);
         $len = strlen($xml);
 
         header("Content-Disposition: attachment; filename=\"$filename\"");
