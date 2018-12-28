@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS `TMS_custom` (
   `option3` text,
   `sort` int(11) DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `IDENT` (`sitekey`,`relkey`,`kind`,`name`)
+  UNIQUE KEY `IDENT` (`sitekey`,`relkey`,`kind`,`name`,`mime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `TMS_entry` (
