@@ -151,7 +151,7 @@ class Site extends \Tms\Cms
             $modified = ($result > 0) ? $this->db->modified($table, 'id = ?', [$post['id']]) : true;
             if ($modified) {
                 // If there is a need to do something after saving
-                // write here.
+                // ^ write here.
             } else {
                 $result = false;
             }
@@ -271,7 +271,18 @@ class Site extends \Tms\Cms
             'modify_date' => 'CURRENT_TIMESTAMP',
         ];
 
-        return $this->db->insert('category', $save, $raw);
+        if (false === $this->db->insert('category', $save, $raw)) {
+            return false;
+        }
+
+        $plugin_results = $this->app->execPlugin('createChildCategoriesForCmsSite', $this->site_data);
+        foreach ((array)$plugin_results as $plugin_result) {
+            if ($plugin_result === false) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
