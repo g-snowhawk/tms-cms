@@ -227,6 +227,11 @@ class Entry extends Category
                 $old_path = $upload_dir.'/'.basename($old['data']);
 
                 if (empty($name)) {
+
+                    if ($this->session->param('ispreview') === 1) {
+                        continue;
+                    }
+
                     if (isset($delete[$key])) {
                         if (file_exists($old_path) && is_file($old_path)) {
                             unlink($old_path);

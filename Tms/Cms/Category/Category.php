@@ -951,7 +951,12 @@ class Category extends Template
             $limit = " LIMIT $limit";
         }
 
-        $statement = 'WHERE sitekey = ? AND kind = ? AND name LIKE ? AND relkey = ?';
+        $relkey_condition = '= ?';
+        if ($this->session->param('ispreview') === 1) {
+            $delete = $this->app->request->param('delete');
+            $relkey_condition = "IN('0',?)";
+        }
+        $statement = "WHERE sitekey = ? AND kind = ? AND name LIKE ? AND relkey $relkey_condition";
         $options = [$this->siteID, $kind, 'file.%', $entrykey];
 
         $list = $this->db->select(
@@ -966,6 +971,14 @@ class Category extends Template
         $upload_dir = \P5\File::realpath('/'.$this->site_data['uploaddir']);
         $dir = $this->site_data['openpath'];
         foreach ($list as &$data) {
+
+            if ($this->session->param('ispreview') === 1) {
+                $deletekey = 'id_'.$data['id'];
+                if (isset($delete[$deletekey])) {
+                    $data = null;
+                    continue;
+                }
+            }
 
             // Thumbnail
             $thumbnails = glob("$dir{$data['path']}*".parent::THUMBNAIL_EXTENSION);
@@ -997,7 +1010,7 @@ class Category extends Template
         }
         unset($data);
 
-        return (empty($list)) ? null : $list;
+        return (empty($list)) ? null : array_filter($list);
     }
 
     /**
