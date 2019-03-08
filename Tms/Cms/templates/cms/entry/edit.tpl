@@ -13,6 +13,8 @@
 {% endblock %}
 
 {% block main %}
+  <input type="hidden" name="mode" value="cms.entry.receive:save">
+  <input type="hidden" name="id" value="{{ post.id }}">
   <p id="backlink"><a href="?mode=cms.entry.response">一覧に戻る</a></p>
   <div class="wrapper">
     <h1>エントリ編集</h1>
@@ -140,10 +142,15 @@
     {% include 'edit_form_metadata.tpl' %}
 
     <div class="form-footer">
-      <input type="submit" name="preview" value="プレビュー">
-      <input type="submit" name="s1_submit" value="保存">
-      <input type="hidden" name="mode" value="cms.entry.receive:save">
-      <input type="hidden" name="id" value="{{ post.id }}">
+      <div class="separate-block">
+        <span>
+          <input type="submit" name="preview" value="プレビュー">
+        </span>
+        <span>
+          <a href="?mode=cms.entry.response">キャンセル</a>
+          <input type="submit" name="s1_submit" value="保存">
+        </span>
+      </div>
     </div>
   </div>
 {% endblock %}

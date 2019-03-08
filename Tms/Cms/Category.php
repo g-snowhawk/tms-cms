@@ -329,7 +329,7 @@ class Category extends Template
      */
     public function getEntryPath($id, $type = 0)
     {
-        $sql = file_get_contents('Tms/Cms/Entry/entry_path.sql', FILE_USE_INCLUDE_PATH);
+        $sql = file_get_contents(__DIR__ . '/Entry/entry_path.sql');
         $unit = $this->db->getAll($sql, [$id], \Tms\Db::GET_RETURN_HASH);
 
         $category_path = $this->getCategoryPath($unit['category'], 2);
@@ -417,6 +417,7 @@ class Category extends Template
         }
         $columns = implode(',', $columns);
         $columns .= ',(SELECT COUNT(*) FROM table::entry WHERE sitekey = :site_id AND category = children.id AND revision = 0 GROUP BY category) AS cnt';
+        $columns .= ',(SELECT COUNT(*) FROM table::entry WHERE sitekey = :site_id AND category = children.id AND active = 1 GROUP BY category) AS active_cnt';
 
         if (is_null($id)) {
             if ($this->isAdmin() || $this->site_data['noroot'] !== '1') {
@@ -1276,6 +1277,11 @@ class Category extends Template
     {
         if ($this->siteProperty('type') !== 'static') {
             return true;
+        }
+
+        // Clear template cache
+        if (false === $this->view->clearAllCaches()) {
+            return false;
         }
 
         $all = false;

@@ -8,6 +8,7 @@
 *.old
 *.org
 _notes
+/vendor
 Desktop.ini
 Thumbs.DB
 confidential

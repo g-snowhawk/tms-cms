@@ -1,0 +1,23 @@
+{
+    "name": "g-snowhawk/tms-cms",
+    "version": "dev-master",
+    "type": "library",
+    "description": "This package is content management system.",
+    "license": "MIT",
+    "require": {
+        "php": ">=5.6.0"
+    },
+    "author": {
+        "name": "Taka G",
+        "email": "githave@p5on.net",
+        "homepage": "https://www.p5on.net"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tms\\Cms\\" : "Tms/Cms/"
+        },
+        "classmap": [
+            "Tms/Cms/Cms.php"
+        ]
+    }
+}

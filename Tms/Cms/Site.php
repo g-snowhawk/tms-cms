@@ -194,7 +194,7 @@ class Site extends \Tms\Cms
      *
      * @return string
      */
-    public function templateDir($sitekey = null, $kind = null)
+    public function templateDirBySite($sitekey = null, $kind = null)
     {
         $sitekey = (empty($sitekey)) ? $this->siteID : $sitekey;
         if (empty($sitekey)) {
@@ -237,7 +237,7 @@ class Site extends \Tms\Cms
         }
         $unit = $this->db->select('path,kind', 'template', 'WHERE identifier=? AND active=?', [$id, 1]);
         if (isset($unit[0])) {
-            $dir = $this->templateDir($sitekey, (int)$unit[0]['kind']);
+            $dir = $this->templateDirBySite($sitekey, (int)$unit[0]['kind']);
             $extension = ($unit[0]['kind'] === '6') ? 'css' : 'tpl';
             return "$dir/{$unit[0]['path']}.$extension";
         }
@@ -294,21 +294,18 @@ class Site extends \Tms\Cms
      */
     protected function createDefaultTemplate($sitekey)
     {
-        $escape_include_path = ini_get('include_path');
         $templates_dir = \Tms\View::TEMPLATE_DIR_NAME;
-        $my_include_path = [
-            $this->app->cnf('global:data_dir')."/$templates_dir",
-            realpath(__DIR__."/../$templates_dir")
-        ];
-        ini_set('include_path', implode(PATH_SEPARATOR, $my_include_path));
+        $default_templates_xml = $this->app->cnf('global:data_dir')."/$templates_dir/".parent::DEFAULT_TEMPLATES_XML_PATH;
+        if (!file_exists($default_templates_xml)) {
+            $default_templates_xml = realpath(__DIR__."/../$templates_dir/".parent::DEFAULT_TEMPLATES_XML_PATH);
+        }
 
         try {
-            $xml_source = file_get_contents(parent::DEFAULT_TEMPLATES_XML_PATH, FILE_USE_INCLUDE_PATH);
+            $xml_source = file_get_contents($default_templates_xml);
             if (false === $xml = simplexml_load_string($xml_source)) {
                 throw new \ErrorException('Failed to parse XML');
             }
         } catch (\ErrorException $e) {
-            ini_set('include_path', $escape_include_path);
             $message = $e->getMessage();
             if (stripos($message, 'No such file or directory') !== false) {
                 return true;
@@ -316,7 +313,6 @@ class Site extends \Tms\Cms
             echo $message;
             return false;
         }
-        ini_set('include_path', $escape_include_path);
 
         $root_template = null;
         foreach ($xml->template as $unit) {
@@ -476,7 +472,7 @@ class Site extends \Tms\Cms
                     $site_data['uploaddir']
                 ])
             );
-            $remove_dirs[] = $this->templateDir($sitekey, 6);
+            $remove_dirs[] = $this->templateDirBySite($sitekey, 6);
         }
         else {
             $remove_dirs[] = $site_data['openpath'];

@@ -34,14 +34,21 @@
           </thead>
           <tbody>
           {% for unit in entries %}
-          <tr class="{{ unit.kind == 'category' ? 'folder' : 'file' }}{% if unit.status is not empty %} {{ unit.status }}{% endif %}">
+            <tr class="{{ unit.kind == 'category' ? 'folder' : 'file' }}{% if unit.status is not empty %} {{ unit.status }}{% endif %}">
               {% if unit.kind == 'category' %}
                 <td class="link with-icon spacer"><a href="?mode=cms.entry.receive:setCategory&amp;id={{ unit.id|url_encode }}">{{ unit.title }}</a></td>
                 {% if site.type == 'dynamic' %}
                   <td class="date">---</td>
                 {% endif %}
               {% else %}
-                <td class="link with-icon spacer"><a href="?mode=cms.{{ unit.kind }}.response:edit&amp;id={{ unit.id|url_encode }}"{% if unit.status == 'draft' %} data-tips="下書き有り"{% endif %}>{{ unit.title }}</a></td>
+                {% if unit.status == 'release' %}
+                  {% set tips = '公開中' %}
+                {% elseif unit.status == 'private' %}
+                  {% set tips = '非公開' %}
+                {% else %}
+                  {% set tips = '下書き有り' %}
+                {% endif %}
+                <td class="link with-icon spacer"><a href="?mode=cms.{{ unit.kind }}.response:edit&amp;id={{ unit.id|url_encode }}"{% if unit.status is not empty %} data-tips="{{ tips }}"{% endif %}>{{ unit.title }}</a></td>
                 {% if site.type == 'dynamic' %}
                   <td class="date">
                     {% if unit.release_date is not empty %}{{ unit.release_date|date('Y年n月j日 H:i') }}{% endif %}

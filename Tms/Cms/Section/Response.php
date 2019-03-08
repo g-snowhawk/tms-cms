@@ -51,8 +51,10 @@ class Response extends \Tms\Cms\Section
             );
             if (count((array) $fetch) > 0) {
                 $post = $fetch[0];
-                if (!empty($post['author_date'])) {
-                    $post['author_date'] = date('Y年n月j日 H:i', strtotime($post['author_date']));
+                foreach ($this->date_columns as $x_date) {
+                    if (!empty($post[$x_date])) {
+                        $post[$x_date] = date($this->date_columns_format, strtotime($post[$x_date]));
+                    }
                 }
             }
         }

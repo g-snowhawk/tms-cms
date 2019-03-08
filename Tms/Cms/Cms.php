@@ -97,6 +97,18 @@ class Cms extends User implements PackageInterface
     }
 
     /**
+     * Application label
+     *
+     * @final
+     *
+     * @return string
+     */
+    final public static function applicationLabel()
+    {
+        return \P5\Lang::translate('APPLICATION_LABEL');
+    }
+
+    /**
      * This package version
      *
      * @final
@@ -106,6 +118,18 @@ class Cms extends User implements PackageInterface
     final public static function version()
     {
         return System::getVersion(__CLASS__);
+    }
+
+    /**
+     * This package version
+     *
+     * @final
+     *
+     * @return string|null
+     */
+    final public static function templateDir()
+    {
+        return __DIR__.'/'.\Tms\View::TEMPLATE_DIR_NAME;
     }
 
     /**
@@ -327,7 +351,7 @@ class Cms extends User implements PackageInterface
     {
         $origin = $uri;
 
-        while ($uri !== '.') {
+        while ($uri !== '.' && !is_null($app->db)) {
             $sitekey = $app->db->get('id', 'site', 'url = ? OR url = ?', [$uri, "$uri/"]);
             if (!empty($sitekey)) {
                 break;
@@ -352,5 +376,17 @@ class Cms extends User implements PackageInterface
     protected function pathToID($path)
     {
         return trim(str_replace(['/','.'], ['-','_'], preg_replace('/\.html?$/','',$path)), '-_');
+    }
+
+    protected function nohup()
+    {
+        $command_path = $this->app->cnf('cms:path_nohup');
+        return (empty($command_path)) ? 'nohup' : $command_path;
+    }
+
+    protected function phpCLI()
+    {
+        $command_path = $this->app->cnf('cms:php_cli');
+        return (empty($command_path)) ? 'php' : $command_path;
     }
 }

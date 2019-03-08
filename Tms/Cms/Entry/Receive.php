@@ -10,6 +10,12 @@
 
 namespace Tms\Cms\Entry;
 
+use Tms\Cms\Category;
+use P5\Environment;
+use P5\Http;
+use P5\Lang;
+use P5\Text;
+
 /**
  * Entry management data receive class.
  *
@@ -18,6 +24,11 @@ namespace Tms\Cms\Entry;
  */
 class Receive extends Response
 {
+    /*
+     * Using common accessor methods
+     */
+    use \Tms\Accessor;
+
     /**
      * Save the data.
      */
@@ -47,7 +58,7 @@ class Receive extends Response
             $response = [[$this, 'edit'], null];
         }
 
-        $this->postReceived(\P5\Lang::translate($message), $status, $response, $options); 
+        $this->postReceived(Lang::translate($message), $status, $response, $options); 
     }
 
     /**
@@ -65,14 +76,14 @@ class Receive extends Response
         $response = [[$this, 'redirect'], $redirect_mode];
 
         list($type, $id) = explode(':', $this->request->post('delete'));
-        $result = ($type === 'category') ? \Tms\Cms\Category::remove() : parent::remove();
+        $result = ($type === 'category') ? Category::remove() : parent::remove();
 
         if (!$result) {
             $message = 'FAILED_REMOVE';
             $status = 1;
         }
 
-        $this->postReceived(\P5\Lang::translate($message), $status, $response, $options); 
+        $this->postReceived(Lang::translate($message), $status, $response, $options); 
     }
 
     public function createRelay()
@@ -81,8 +92,8 @@ class Receive extends Response
         $relkey = $this->request->post('relay');
         $result = parent::createRelation($entrykey, $relkey);
 
-        if (strtolower(\P5\Environment::server('HTTP_X_REQUESTED_WITH')) === 'xmlhttprequest') {
-            \P5\Http::nocache();
+        if (strtolower(Environment::server('HTTP_X_REQUESTED_WITH')) === 'xmlhttprequest') {
+            Http::nocache();
             header('Content-type:text/plain;charset=utf-8');
             $json = ['callback' => $this->request->param('callback'), 'data' => $result];
             echo json_encode($json);
@@ -90,9 +101,9 @@ class Receive extends Response
         }
 
         if ($result) {
-            $this->session->param('messages', \P5\Lang::translate('SUCCESS_SAVED'));
+            $this->session->param('messages', Lang::translate('SUCCESS_SAVED'));
         }
-        \P5\Http::redirect(
+        Http::redirect(
             $this->app->systemURI().'?mode=cms.entry.response:edit'
         );
     }
@@ -103,8 +114,8 @@ class Receive extends Response
         $relkey = $this->request->post('removeRelay');
         $result = $this->db->delete('relation', 'entrykey=? AND relkey=?', [$entrykey, $relkey]);
 
-        if (strtolower(\P5\Environment::server('HTTP_X_REQUESTED_WITH')) === 'xmlhttprequest') {
-            \P5\Http::nocache();
+        if (strtolower(Environment::server('HTTP_X_REQUESTED_WITH')) === 'xmlhttprequest') {
+            Http::nocache();
             header('Content-type:text/plain;charset=utf-8');
             $json = ['callback' => $this->request->param('callback'), 'data' => $result];
             echo json_encode($json);
@@ -112,9 +123,9 @@ class Receive extends Response
         }
 
         if ($result) {
-            $this->session->param('messages', \P5\Lang::translate('SUCCESS_REMOVED'));
+            $this->session->param('messages', Lang::translate('SUCCESS_REMOVED'));
         }
-        \P5\Http::redirect(
+        Http::redirect(
             $this->app->systemURI().'?mode=cms.entry.response:edit'
         );
     }
@@ -128,7 +139,7 @@ class Receive extends Response
         $status = 0;
         $callback = '\P5\Http::redirect';
         $args = [$this->app->systemURI().'?mode=cms.entry.response'];
-        if (!\Tms\Cms\Category::save()) {
+        if (!Category::save()) {
             $message = 'FAILED_SAVE';
             $status = 1;
             $callback = [
@@ -137,7 +148,7 @@ class Receive extends Response
             ];
             $args = [];
         }
-        $this->postReceived(\P5\Lang::translate($message), $status, $callback, $args); 
+        $this->postReceived(Lang::translate($message), $status, $callback, $args); 
     }
 
     /**
@@ -145,22 +156,50 @@ class Receive extends Response
      */
     public function reassembly()
     {
-        // Clear template cache
-        if (false === $this->view->clearAllCaches()) {
-            return false;
-        }
+        $message = 'SUCCESS_REASSEMBLY';
+        $status = 0;
+        $callback = [[$this, 'redirect'], 'cms.entry.response:reassembly'];
+        $args = [];
 
-        if ($this->siteProperty('type') !== 'dynamic') {
-            if (false === \Tms\Cms\Category::reassembly()) {
-                return false;
+        if ($this->isAjax) {
+            $disable_functions = Text::explode(',', ini_get('disable_functions'));
+            if (!in_array('exec', $disable_functions)) {
+                $query = ['polling_id' => $this->request->param('polling_id')];
+                $command = $this->nohup() . ' ' . $this->phpCLI()
+                    . ' -d memory_limit=-1'
+                    . ' -d include_path="'.ini_get('include_path') . '"'
+                    . ' ' . Environment::server('script_filename')
+                    . ' --phpsessid=' . escapeshellarg(session_id())
+                    . ' --mode=' . escapeshellarg('cms.entry.receive:ajaxReassembly')
+                    . ' --params=' . escapeshellarg(http_build_query($query))
+                    . ' > /dev/null &';
+                exec($command, $output, $return);
+                $status = [
+                    'status' => $return,
+                ];
+
+                if ($return !== 0) {
+                    $message = 'FAILED_REASSEMBLY';
+                } else {
+                    $status['polling_id'] = $this->request->param('polling_id');
+                    $status['polling_address'] = $this->app->systemURI().'?mode=cms.entry.response:pollingReassembly';
+                }
+
+            }
+        } else {
+            if (false === Category::reassembly()) {
+                $message = 'FAILED_REASSEMBLY';
+                $status = 1;
+                $callback = [
+                    [[$this, 'reassembly'], []]
+                ];
+                $args = [];
+            } else {
+                $this->app->logger->log("Reassembly the site `{$this->siteID}'", 101);
             }
         }
 
-        $this->session->param('messages', \P5\Lang::translate('SUCCESS_REASSEMBLY'));
-        $this->app->logger->log("Reassembly the site `{$this->siteID}'", 101);
-        \P5\Http::redirect(
-            $this->app->systemURI().'?mode=cms.entry.response:reassembly'
-        );
+        $this->postReceived(Lang::translate($message), $status, $callback, $args); 
     }
 
     /**
@@ -171,7 +210,7 @@ class Receive extends Response
     public function setCategory($id = null)
     {
         parent::setCategory($this->request->param('id'));
-        \P5\Http::redirect(
+        Http::redirect(
             $this->app->systemURI().'?mode=cms.entry.response'
         );
         //$this->init();
@@ -210,5 +249,18 @@ class Receive extends Response
         header('Content-type: text/plain; charset=utf-8');
         echo $response;
         exit;
+    }
+
+    public function ajaxReassembly()
+    {
+        $this->startPolling();
+
+        $message = 'SUCCESS_REASSEMBLY';
+        if (false === Category::reassembly()) {
+            $message = 'FAILED_REASSEMBLY';
+        }
+
+        $this->endPolling();
+        $this->echoPolling(['message' => Lang::translate($message)]);
     }
 }

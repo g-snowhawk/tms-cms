@@ -10,6 +10,9 @@
 
 namespace Tms\Cms\Entry;
 
+use P5\Http;
+use P5\Lang;
+
 /**
  * Entry management request response class.
  *
@@ -52,7 +55,7 @@ class Response extends \Tms\Cms\Entry
             $this->setCategory($this->session->param('current_category'));
         }
 
-        $sql = file_get_contents('Tms/Cms/Entry/default.sql', FILE_USE_INCLUDE_PATH);
+        $sql = file_get_contents(__DIR__ . '/default.sql');
 
         // Sort order
         $sort_option = '';
@@ -68,7 +71,7 @@ class Response extends \Tms\Cms\Entry
         $this->view->bind('entries', $entry);
 
         $form = $this->view->param('form');
-        $form['confirm'] = \P5\Lang::translate('CONFIRM_DELETE_DATA');
+        $form['confirm'] = Lang::translate('CONFIRM_DELETE_DATA');
         $this->view->bind('form', $form);
 
         $this->view->bind('err', $this->app->err);
@@ -105,7 +108,7 @@ class Response extends \Tms\Cms\Entry
         if ($check === 'update') {
             $parent = $this->db->get('category', 'entry', 'id = ?', [$id]);
             if ($this->session->param('current_category') !== $parent) {
-                throw new \Tms\PermitException(\P5\Lang::translate('ILLEGAL_OPERATION'));
+                throw new \Tms\PermitException(Lang::translate('ILLEGAL_OPERATION'));
             }
         }
 
@@ -216,7 +219,7 @@ class Response extends \Tms\Cms\Entry
 
         $globals = $this->view->param();
         $form = $globals['form'];
-        $form['confirm'] = \P5\Lang::translate('CONFIRM_SAVE_DATA');
+        $form['confirm'] = Lang::translate('CONFIRM_SAVE_DATA');
         $form['enctype'] = 'multipart/form-data';
         $this->view->bind('form', $form);
 
@@ -236,13 +239,13 @@ class Response extends \Tms\Cms\Entry
     {
         $this->session->param('ispreview', 1);
 
-        // 一時的に保存
+        // Save temporary image files
         $this->removePreviewImages();
         $this->saveFiles('preview');
 
-        \P5\Http::responseHeader('X-Frame-Options', 'SAMEORIGIN');
-        \P5\Http::responseHeader('X-XSS-Protection', '1');
-        \P5\Http::responseHeader('X-Content-Type-Options', 'nosniff');
+        Http::responseHeader('X-Frame-Options', 'SAMEORIGIN');
+        Http::responseHeader('X-XSS-Protection', '1');
+        Http::responseHeader('X-Content-Type-Options', 'nosniff');
         echo $this->build($this->request->param('id'), true);
         $this->session->clear('ispreview');
         exit;
@@ -253,9 +256,28 @@ class Response extends \Tms\Cms\Entry
      */
     public function reassembly()
     {
-        $form = $this->view->param('form');
-        $form['confirm'] = \P5\Lang::translate('CONFIRM_REASSEMBLY');
-        $this->view->bind('form', $form);
+        // Can uses async
+        $enable_async = false;
+        $disable_functions = array_map('trim', explode(',', ini_get('disable_functions')));
+        if (!in_array('exec', $disable_functions)) {
+            $enable_cli = exec(
+                $this->nohup() . ' ' . $this->phpCLI() . ' --version',
+                $response, $status
+            );
+
+            if ($status === 0) {
+                $this->view->bind('runAsyncBy', uniqid('pol'));
+                $this->view->bind('confirmReassembly', Lang::translate('CONFIRM_REASSEMBLY'));
+                $enable_async = true;
+            }
+        }
+
+        if (false === $enable_async) {
+            $form = $this->view->param('form');
+            $form['confirm'] = Lang::translate('CONFIRM_REASSEMBLY');
+            $this->view->bind('form', $form);
+        }
+
         $this->view->render('cms/entry/reassembly.tpl');
     }
 
@@ -265,5 +287,10 @@ class Response extends \Tms\Cms\Entry
         header('Content-type: text/plain; charset=utf-8');
         echo json_encode($list);
         exit;
+    }
+
+    public function pollingReassembly()
+    {
+        $polling_file = $this->echoPolling(['message' => Lang::translate('SUCCESS_REASSEMBLY')]);
     }
 }

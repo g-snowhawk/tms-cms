@@ -1,6 +1,11 @@
 {% extends "master.tpl" %}
 
 {% block main %}
+  <input type="hidden" name="mode" value="cms.section.receive:save">
+  <input type="hidden" name="eid" value="{{ post.eid }}">
+  <input type="hidden" name="prn" value="{{ post.prn }}">
+  <input type="hidden" name="id" value="{{ post.id }}">
+  <input type="hidden" name="level" value="{{ post.level }}">
   <p id="backlink">
     <a href="?mode=cms.entry.response:edit&amp;id={{ post.eid }}">エントリに戻る</a>
     {% if post.prn is not empty %}
@@ -52,12 +57,14 @@
     {% include 'edit_form_metadata.tpl' %}
 
     <div class="form-footer">
-      <input type="submit" name="s1_submit" value="保存">
-      <input type="hidden" name="mode" value="cms.section.receive:save">
-      <input type="hidden" name="eid" value="{{ post.eid }}">
-      <input type="hidden" name="prn" value="{{ post.prn }}">
-      <input type="hidden" name="id" value="{{ post.id }}">
-      <input type="hidden" name="level" value="{{ post.level }}">
+      <div class="separate-block">
+        <span>&nbsp;</span>
+        <span>
+          {% set backMode = post.prn is empty ? 'cms.entry.response:edit' : 'cms.section.response:edit' %}
+          <a href="?mode={{ backMode }}&amp;id={{ post.eid }}" class="button" id="cancel-button">キャンセル</a>
+          <input type="submit" name="s1_submit" value="保存">
+        </span>
+      </div>
     </div>
   </div>
 {% endblock %}

@@ -159,4 +159,9 @@ class Response extends Section
         ];
         return (in_array($key, $allows)) ? \P5\Environment::server($key) : null;
     }
+
+    public function callByPlugin(\Tms\Plugin $plugin, $function, ...$params)
+    {
+        call_user_func_array([$this, $function], $params);
+    }
 }
