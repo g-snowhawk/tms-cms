@@ -735,6 +735,10 @@ class Category extends Template
      */
     public function entries($filter = '', $recursive = 0, $row = 0, $offset = 0, $pagenation = 0, $current_page = null, $sort = 'ASC', $chroot = null)
     {
+        if (is_null($current_page)) {
+            $current_page = $this->request->param('current_page');
+        }
+
         if (!is_null($current_page)) {
             $this->offset = ($current_page - 1) * $row;
         }
