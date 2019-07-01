@@ -73,11 +73,19 @@ class Dynamic extends Section
             default :
                 $plugins = $this->app->execPlugin('buildDynamicContents', $this->uri);
                 foreach ($plugins as $plugin) {
+                    if (is_null($plugin)) {
+                        continue;
+                    }
                     $source = $plugin;
                     break 2;
                 }
-                trigger_error('Not found '.$this->uri, E_USER_ERROR);
-                break;
+
+                $this->session->clear('direct_uri');
+                header_remove('Set-Cookie');
+                http_response_code(404);
+                header("HTTP/1.0 404 Not Found");
+                echo '404 Not Found';
+                exit;
         }
 
         header('X-Frame-Options: SAMEORIGIN');
