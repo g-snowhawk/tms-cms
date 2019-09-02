@@ -237,6 +237,9 @@ class Response extends \Tms\Cms\Entry
         $this->session->param('ispreview', 1);
 
         // 一時的に保存
+        $statement = "WHERE sitekey = ? AND kind = ? AND name LIKE ? AND relkey = '0'";
+        $options = [$this->siteID, 'entry', 'file.%'];
+        $this->db->delete('custom', $statement, $options);
         $this->removePreviewImages();
         $this->saveFiles('preview');
 
