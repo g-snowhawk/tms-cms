@@ -151,6 +151,14 @@ class Site extends \Tms\Cms
             $modified = ($result > 0) ? $this->db->modified($table, 'id = ?', [$post['id']]) : true;
             if ($modified) {
                 // If there is a need to do something after saving
+                $plugin_results = $this->app->execPlugin('afterSaveCmsSite', $this->site_data);
+                foreach ((array)$plugin_results as $plugin_result) {
+                    if ($plugin_result === false || is_null($plugin_result)) {
+                        return false;
+                    } elseif (is_int($plugin_result)) {
+                        $result += $plugin_result;
+                    }
+                }
                 // ^ write here.
             } else {
                 $result = false;
