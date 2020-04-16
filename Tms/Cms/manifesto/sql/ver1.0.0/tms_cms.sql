@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS `TMS_category` (
   `priority` int(11) DEFAULT NULL,
   `inheritance` tinyint(1) NOT NULL DEFAULT '0',
   `reserved` enum('0','1') NOT NULL DEFAULT '0',
+  `trash` enum('0','1') NOT NULL,
   `author_date` datetime DEFAULT NULL,
   `create_date` datetime NOT NULL,
   `modify_date` datetime DEFAULT NULL,
@@ -114,6 +115,7 @@ CREATE TABLE IF NOT EXISTS `TMS_entry` (
   `revision` int(11) DEFAULT '0',
   `active` tinyint(1) NOT NULL DEFAULT '0',
   `status` varchar(32) DEFAULT NULL,
+  `trash` enum('0','1') NOT NULL,
   `release_date` datetime DEFAULT NULL,
   `close_date` datetime DEFAULT NULL,
   `author_date` datetime DEFAULT NULL,
@@ -164,7 +166,7 @@ CREATE TABLE IF NOT EXISTS `TMS_section` (
   KEY `NESTED_RIGHT` (`rgt`),
   KEY `level` (`level`),
   CONSTRAINT `TMS_section_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`),
-  CONSTRAINT `TMS_section_ibfk_2` FOREIGN KEY (`entrykey`) REFERENCES `TMS_entry` (`id`),
+  CONSTRAINT `TMS_section_ibfk_2` FOREIGN KEY (`entrykey`) REFERENCES `TMS_entry` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT `TMS_section_ibfk_3` FOREIGN KEY (`level`) REFERENCES `TMS_section_level_key` (`level`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

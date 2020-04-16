@@ -32,7 +32,42 @@ TM_Category.prototype.init = function(ev) {
             bt.addEventListener('click', this.openForm, false);
         }
     }
+
+    let trashButtons = document.getElementsByName('trash');
+    Array.prototype.forEach.call(trashButtons, element => {
+        element.addEventListener('click', this.intoTrash);
+    })
 };
+TM_Category.prototype.intoTrash = function(event) {
+    event.preventDefault();
+
+    const element = event.target;
+    const form = element.form;
+
+    const pair = element.value.split(':');
+    const kind = pair[0];
+    const identifier = pair[1];
+
+    let data = new FormData();
+    data.append('stub', form.stub.value);
+    data.append('mode', 'cms.' + kind + '.receive:trash');
+    data.append('identifier', identifier);
+
+    fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: data
+    }).then(response => response.json())
+    .then((json) => {
+        console.log(json);
+        if (json.status === 0) {
+            location.reload();
+        } else {
+            alert(json.message);
+        }
+    })
+    .catch(error => console.error(error));
+}
 TM_Category.prototype.onClick = function(ev) {
     ev.preventDefault();
     var el = ev.target;

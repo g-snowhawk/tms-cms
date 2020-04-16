@@ -23,6 +23,9 @@ TM_Entry.prototype.onClick = function(ev) {
         case 'removeRelay':
             TM.entry.sendDeleteRelay(el);
             break;
+        case 'trash':
+            TM.entry.intoTrash(el);
+            break;
     }
 };
 TM_Entry.prototype.preview = function() {
@@ -104,6 +107,16 @@ TM_Entry.prototype.sendDeleteRelay = function(el) {
     if(form){
         form.dataset.confirm = encodeURIComponent('削除します。よろしいですか？');
         form.mode.value = 'cms.entry.receive:removeRelay';
+
+        var evn = document.createEvent('Event');
+        evn.initEvent('externalsubmit', true, true);
+        form.dispatchEvent(evn);
+    }
+};
+TM_Entry.prototype.trash = function(el) {
+    var form = el.form;
+    if(form){
+        form.mode.value = 'cms.entry.receive:trash';
 
         var evn = document.createEvent('Event');
         evn.initEvent('externalsubmit', true, true);

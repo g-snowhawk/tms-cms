@@ -263,4 +263,96 @@ class Receive extends Response
         $this->endPolling();
         $this->echoPolling(['message' => Lang::translate($message)]);
     }
+
+    public function trash() 
+    {
+        $identifier = $this->request->param('identifier');
+
+        $options = [
+            'statement' => 'id = ? OR identifier = ?',
+            'replaces' => [$identifier, $identifier],
+        ];
+        $status = (
+            $this->toPrivate($identifier) &&
+            parent::intoTrash('entry', $identifier, $options)
+        ) ? 0 : 1;
+
+        $message = $status > 0
+            ? 'Failed into the trash'
+            : 'Success into the trash';
+        $response = [
+            'status' => $status,
+            'message' => $message,
+        ];
+        header('Content-type: text/plain; charset=utf-8');
+        echo json_encode($response);
+        exit;
+    }
+
+    public function rewindTrashItem() 
+    {
+        $identifier = $this->request->param('identifier');
+
+        $options = [
+            'statement' => 'id = ? OR identifier = ?',
+            'replaces' => [$identifier, $identifier],
+        ];
+        $status = (
+            $this->toPrivate($identifier) &&
+            parent::intoTrash('entry', $identifier, $options, '0')
+        ) ? 0 : 1;
+
+        $message = $status > 0
+            ? 'Failed put out the trash'
+            : 'Success put out the trash';
+        $response = [
+            'status' => $status,
+            'message' => $message,
+        ];
+        header('Content-type: text/plain; charset=utf-8');
+        echo json_encode($response);
+        exit;
+    }
+
+    public function emptyTrash() 
+    {
+        $sql = file_get_contents(__DIR__ . '/trash.sql');
+
+        $items = $this->db->getAll($sql, ['user_id' => $this->uid, 'site_id' => $this->siteID, 'revision' => 0]);
+        if (false === $items) {
+            parent::trash();
+        }
+
+        $this->db->begin();
+        $error = false;
+        foreach ($items as $item) {
+            $id = $item["id"];
+            if ($item["kind"] === "category") {
+                $path = $this->getCategoryPath($id, 1);
+                if (false === $this->db->delete('category', "id = ? AND trash = '1'", [$id])) {
+                    $error = true;
+                    break;
+                }
+                continue;
+            }
+            if (
+                false === $this->db->delete(parent::SECTION_TABLE, 'entrykey = ?', [$id])
+                || false === $this->db->delete(parent::ENTRY_TABLE, "identifier = ? AND trash = '1' ORDER BY id DESC", [$id])
+            ) {
+                $error = true;
+                break;
+            }
+        }
+
+        if ($error) {
+            trigger_error($this->db->error());
+            $this->db->rollback();
+        } else {
+            $this->db->commit();
+        }
+
+        Http::redirect(
+            $this->app->systemURI().'?mode=cms.entry.response:trash'
+        );
+    }
 }

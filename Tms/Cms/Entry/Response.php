@@ -293,4 +293,25 @@ class Response extends \Tms\Cms\Entry
     {
         $polling_file = $this->echoPolling(['message' => Lang::translate('SUCCESS_REASSEMBLY')]);
     }
+
+    public function trash()
+    {
+        $sql = file_get_contents(__DIR__ . '/trash.sql');
+
+        $items = $this->db->getAll($sql, ['user_id' => $this->uid, 'site_id' => $this->siteID, 'revision' => 0]);
+        if (false === $items) {
+            echo $this->db->error();
+        }
+        $this->view->bind('items', $items);
+
+        $form = $this->view->param('form');
+        $form['confirm'] = Lang::translate('CONFIRM_DELETE_DATA');
+        $this->view->bind('form', $form);
+
+        //$this->view->bind('err', $this->app->err);
+
+        $this->setHtmlId('cms-trash');
+
+        parent::defaultView('cms-entry-trash');
+    }
 }

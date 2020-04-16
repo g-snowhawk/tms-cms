@@ -4,7 +4,7 @@ SELECT children.id, children.title, NULL AS parent, NULL AS status,
        'category' AS kind
   FROM (SELECT * FROM table::category WHERE id = :category_id) parent
        LEFT OUTER JOIN (SELECT c1.*
-                          FROM (SELECT * FROM table::category WHERE sitekey = :site_id AND reserved = '0') c1
+                          FROM (SELECT * FROM table::category WHERE trash = '0' AND sitekey = :site_id AND reserved = '0') c1
                                LEFT JOIN (SELECT priv,filter2 FROM table::permission WHERE userkey = :user_id AND application = 'cms' AND class = 'category' AND type = 'read') p1
                                       ON c1.id = p1.filter2
                                    WHERE p1.priv = '1' OR p1.priv IS NULL) children
@@ -12,7 +12,7 @@ SELECT children.id, children.title, NULL AS parent, NULL AS status,
                    AND children.lft < parent.rgt
  WHERE NOT EXISTS (SELECT *
                      FROM (SELECT c2.*
-                             FROM (SELECT * FROM table::category WHERE sitekey = :site_id) c2
+                             FROM (SELECT * FROM table::category WHERE trash = '0' AND sitekey = :site_id) c2
                                   LEFT JOIN (SELECT priv,filter2 FROM table::permission WHERE userkey = :user_id AND application = 'cms' AND class = 'category' AND type = 'read') p2
                                          ON c2.id = p2.filter2
                                       WHERE p2.priv = '1' OR p2.priv IS NULL) midparent
@@ -25,7 +25,8 @@ SELECT children.id, children.title, NULL AS parent, NULL AS status,
 SELECT id, title, category AS parent, status, release_date, close_date,
        create_date, modify_date, author_date, 'entry' AS kind
   FROM table::entry
- WHERE sitekey = :site_id
+ WHERE trash = '0'
+   AND sitekey = :site_id
    AND category = :category_id
    AND revision = :revision
  ORDER BY kind{{ sort_option }}

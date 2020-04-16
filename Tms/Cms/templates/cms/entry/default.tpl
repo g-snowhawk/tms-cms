@@ -13,6 +13,9 @@
         <nav>
           {% import "cms/category/tree.tpl" as tree %}
           {{ tree.recursion(null) }}
+          <ul>
+            <li><a href="?mode=cms.entry.response:trash">・ごみ箱</a></li>
+          </ul>
         </nav>
       </div>
     </div>
@@ -66,9 +69,9 @@
                 <td class="button">&nbsp;</td>
               {% endif %}
               {% if unit.kind == 'category' and apps.hasPermission('cms.category.delete', null, session.current_category) %}
-                <td class="button reddy"><label><input type="radio" name="delete" value="{{ unit.kind }}:{{ unit.id }}">削除</label></td>
+                <td class="button reddy"><label><input type="radio" name="delete" value="{{ unit.kind }}:{{ unit.id }}" class="invisible">削除</label></td>
               {% elseif unit.kind == 'entry' and apps.hasPermission('cms.entry.delete', null, unit.parent) %}
-                <td class="button reddy"><label><input type="radio" name="delete" value="{{ unit.kind }}:{{ unit.id }}">削除</label></td>
+                <td class="button reddy"><label><input type="radio" name="delete" value="{{ unit.kind }}:{{ unit.id }}" class="invisible">削除</label></td>
               {% else %}
                 <td class="button reddy">&nbsp;</td>
               {% endif %}

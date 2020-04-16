@@ -10,6 +10,10 @@
 
 namespace Tms\Cms\Category;
 
+use P5\File;
+use P5\Http;
+use P5\Lang;
+
 /**
  * Category data receive class.
  *
@@ -37,7 +41,7 @@ class Receive extends Response
             $response = [[$this, 'edit'], null];
         }
 
-        $this->postReceived(\P5\Lang::translate($message), $status, $response, $options); 
+        $this->postReceived(Lang::translate($message), $status, $response, $options); 
     }
 
     /**
@@ -46,10 +50,66 @@ class Receive extends Response
     public function remove()
     {
         if (parent::remove()) {
-            $this->session->param('messages', \P5\Lang::translate('SUCCESS_REMOVED'));
+            $this->session->param('messages', Lang::translate('SUCCESS_REMOVED'));
         }
-        \P5\Http::redirect(
+        Http::redirect(
             $this->app->systemURI().'?mode=cms.entry.response'
         );
+    }
+
+    public function trash() 
+    {
+        $identifier = $this->request->param('identifier');
+        if (false === $this->isEmpty($identifier)) {
+            $status = 1;
+            $message = Lang::translate('NOT_EMPTY');
+        } else {
+            $this->db->begin();
+            $path = $this->getCategoryPath($identifier, 1);
+            $status = parent::intoTrash('category', $identifier) ? 0 : 1;
+
+            // Remove physical path
+            if ($status === 0) {
+                if (file_exists($path)) {
+                    if (false === File::rmdir($path, true)) {
+                        trigger_error("{$path} doesn't remove. Please remove manually if you need.");
+                    }
+                }
+            }
+
+            if ($status > 0) {
+                $this->db->rollback();
+            } else {
+                $this->db->commit();
+            }
+
+            $message = $status > 0
+                ? 'Failed into the trash'
+                : 'Success into the trash';
+        }
+
+        $response = [
+            'status' => $status,
+            'message' => $message,
+        ];
+        header('Content-type: text/plain; charset=utf-8');
+        echo json_encode($response);
+        exit;
+    }
+
+    public function rewindTrashItem() 
+    {
+        $identifier = $this->request->param('identifier');
+        $status = parent::intoTrash('category', $identifier, [], '0') ? 0 : 1;
+        $message = $status > 0
+            ? 'Failed put out the item'
+            : 'Success put out the item';
+        $response = [
+            'status' => $status,
+            'message' => $message,
+        ];
+        header('Content-type: text/plain; charset=utf-8');
+        echo json_encode($response);
+        exit;
     }
 }

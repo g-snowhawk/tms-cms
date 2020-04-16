@@ -650,7 +650,7 @@ class Entry extends Category
      *
      * @return bool
      */
-    protected function toPrivate($entrykey)
+    protected function toPrivate($entrykey): bool
     {
         $this->checkPermission('cms.entry.publish');
 
@@ -955,7 +955,11 @@ class Entry extends Category
     {
         $upload_dir = $this->fileUploadDir('preview');
         if (file_exists($upload_dir)) {
-            $this->db->delete('custom', 'sitekey = ? AND relkey = ? AND kind = ? AND name LIKE ?', [$this->siteID, 0, 'entry', 'file.%']);
+            $this->db->delete(
+                'custom',
+                'sitekey = ? AND relkey = ? AND kind = ? AND name LIKE ?',
+                [$this->siteID, 0, 'entry', 'file.%']
+            );
             \P5\File::rmdir($upload_dir, true);
         }
     }

@@ -194,7 +194,7 @@ class Section extends Entry
      *
      * @return bool
      */
-    protected function toPrivate($post)
+    protected function toPrivate($post): bool
     {
         $this->checkPermission('cms.entry.publish');
 
