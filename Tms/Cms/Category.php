@@ -358,7 +358,8 @@ class Category extends Template
             $id = $this->site_root;
         }
 
-        if (!$this->isAdmin() && $this->site_data['noroot'] === '1' && $id === $this->site_root) {
+        $noroot = isset($this->site_data['noroot']) ? $this->site_data['noroot'] : null;
+        if (!$this->isAdmin() && $noroot === '1' && $id === $this->site_root) {
             if (false !== $childCategories = $this->childCategories($id, 'id')) {
                 $id = $childCategories[0]['id'];
             }
