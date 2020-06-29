@@ -1,11 +1,19 @@
 {
     "name": "g-snowhawk/tms-cms",
-    "version": "dev-master",
     "type": "library",
     "description": "This package is content management system.",
     "license": "MIT",
+    "repositories": [
+        {
+            "name": "g-snowhawk/tms-core",
+            "type": "vcs",
+            "url": "https://github.com/g-snowhawk/tms-core.git"
+        }
+    ],
     "require": {
-        "php": ">=5.6.0"
+        "php": ">=7.2.0",
+        "g-snowhawk/tms-core": "dev-master",
+        "g-snowhawk/p5": "@dev"
     },
     "author": {
         "name": "Taka G",
