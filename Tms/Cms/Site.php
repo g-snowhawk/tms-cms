@@ -455,6 +455,17 @@ class Site extends \Tms\Cms
 
         $site_data = $this->loadSiteData($sitekey);
 
+        try {
+            $results = $this->app->execPlugin('beforeRemoveCmsSite', $sitekey);
+            foreach ((array)$results as $result) {
+                if ($result === false) {
+                    throw new \ErrorException('Some error in exec plugins');
+                }
+            }
+        } catch (\ErrorException $e) {
+            return false;
+        }
+
         if (false === $this->db->delete('section', 'sitekey = ?', [$sitekey])) {
             return false;
         }
