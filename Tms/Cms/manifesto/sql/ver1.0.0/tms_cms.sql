@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS `TMS_template` (
   UNIQUE KEY `IDENTIFIER` (`identifier`,`revision`),
   UNIQUE KEY `FILEPATH` (`sitekey`,`revision`,`path`),
   KEY `sitekey` (`sitekey`),
-  CONSTRAINT `TMS_template_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`)
+  CONSTRAINT `TMS_template_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `TMS_category` (
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `TMS_category` (
   KEY `NESTED_RIGHT` (`rgt`),
   KEY `TEMPLATE` (`template`),
   KEY `DEFAULT_TEMPLATE` (`default_template`),
-  CONSTRAINT `TMS_category_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`),
+  CONSTRAINT `TMS_category_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT `TMS_category_ibfk_2` FOREIGN KEY (`template`) REFERENCES `TMS_template` (`id`),
   CONSTRAINT `TMS_category_ibfk_3` FOREIGN KEY (`default_template`) REFERENCES `TMS_template` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -96,7 +96,9 @@ CREATE TABLE IF NOT EXISTS `TMS_custom` (
   `option3` text,
   `sort` int(11) DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `IDENT` (`sitekey`,`relkey`,`kind`,`name`,`mime`)
+  KEY `SITEKEY` (`sitekey`),
+  UNIQUE KEY `IDENT` (`sitekey`,`relkey`,`kind`,`name`,`mime`),
+  CONSTRAINT `TMS_custom_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `TMS_entry` (
@@ -126,7 +128,7 @@ CREATE TABLE IF NOT EXISTS `TMS_entry` (
   KEY `sitekey` (`sitekey`,`category`,`path`),
   KEY `REVISION` (`revision`),
   KEY `template` (`template`),
-  CONSTRAINT `TMS_entry_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`),
+  CONSTRAINT `TMS_entry_ibfk_1` FOREIGN KEY (`sitekey`) REFERENCES `TMS_site` (`id`) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT `TMS_entry_ibfk_2` FOREIGN KEY (`template`) REFERENCES `TMS_template` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

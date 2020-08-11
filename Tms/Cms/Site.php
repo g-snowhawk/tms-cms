@@ -466,18 +466,6 @@ class Site extends \Tms\Cms
             return false;
         }
 
-        if (false === $this->db->delete('section', 'sitekey = ?', [$sitekey])) {
-            return false;
-        }
-        if (false === $this->db->delete('entry', 'sitekey = ?', [$sitekey])) {
-            return false;
-        }
-        if (false === $this->db->delete('category', 'sitekey = ?', [$sitekey])) {
-            return false;
-        }
-        if (false === $this->db->delete('template', 'sitekey = ?', [$sitekey])) {
-            return false;
-        }
         if (false === $this->db->delete('site', 'id = ?', [$sitekey])) {
             return false;
         }
