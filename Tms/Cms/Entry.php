@@ -88,7 +88,7 @@ class Entry extends Category
                     continue;
                 }
 
-                $save[$field] = (empty($post[$field])) ? null : $post[$field];
+                $save[$field] = $post[$field] ?? null;
             }
         }
 
@@ -107,7 +107,9 @@ class Entry extends Category
             $raw['create_date'] = 'CURRENT_TIMESTAMP';
             $save['sitekey'] = $this->siteID;
             $save['userkey'] = $this->uid;
-            $save['category'] = $this->categoryID;
+            if (empty($save['category'])) {
+                $save['category'] = $this->categoryID;
+            }
             if (false !== $result = $this->db->insert(self::ENTRY_TABLE, $save, $raw)) {
                 $entrykey = $this->db->lastInsertId(null, 'id');
                 $this->db->update(
