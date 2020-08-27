@@ -305,7 +305,7 @@ class Site extends \Tms\Cms
         $templates_dir = \Tms\View::TEMPLATE_DIR_NAME;
         $default_templates_xml = $this->app->cnf('global:data_dir')."/$templates_dir/".parent::DEFAULT_TEMPLATES_XML_PATH;
         if (!file_exists($default_templates_xml)) {
-            $default_templates_xml = realpath(__DIR__."/../$templates_dir/".parent::DEFAULT_TEMPLATES_XML_PATH);
+            $default_templates_xml = realpath(__DIR__."/$templates_dir/".parent::DEFAULT_TEMPLATES_XML_PATH);
         }
 
         try {
