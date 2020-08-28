@@ -184,7 +184,9 @@ class Response extends \Tms\Cms\Entry
 
         $this->view->bind('post', $post);
 
-        $this->view->bind('category_reservation', $this->db->get('reserved', 'category', 'sitekey = ? AND id = ?', [$this->siteID, $post['category']]));
+        $category_reservation = (empty($post['category']))
+            ? null : $this->db->get('reserved', 'category', 'sitekey = ? AND id = ?', [$this->siteID, $post['category']]);
+        $this->view->bind('category_reservation', $category_reservation);
 
         // Files
         $custom = [];
