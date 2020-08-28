@@ -75,10 +75,12 @@ class Entry extends Category
         }
         $this->db->begin();
 
-        $fields = $this->db->getFields(self::ENTRY_TABLE);
+        $fields = $this->db->getFields(self::ENTRY_TABLE, true);
         $save = ['revision' => '0'];
         $raw = [];
-        foreach ($fields as $field) {
+        foreach ($fields as $unit) {
+            $field = $unit['Field'];
+            $null = ($unit['Null'] === 'YES');
             if (in_array($field, $skip)) {
                 continue;
             }
@@ -88,7 +90,7 @@ class Entry extends Category
                     continue;
                 }
 
-                $save[$field] = $post[$field] ?? null;
+                $save[$field] = ($post[$field] === '' && $null) ? null : $post[$field];
             }
         }
 
