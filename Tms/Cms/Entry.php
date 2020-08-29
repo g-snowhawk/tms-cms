@@ -109,9 +109,7 @@ class Entry extends Category
             $raw['create_date'] = 'CURRENT_TIMESTAMP';
             $save['sitekey'] = $this->siteID;
             $save['userkey'] = $this->uid;
-            if (empty($save['category'])) {
-                $save['category'] = $this->categoryID;
-            }
+            $save['category'] = $save['category'] ?? $this->categoryID;
             if (false !== $result = $this->db->insert(self::ENTRY_TABLE, $save, $raw)) {
                 $entrykey = $this->db->lastInsertId(null, 'id');
                 $this->db->update(
