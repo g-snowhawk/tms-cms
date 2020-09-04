@@ -36,22 +36,8 @@ function cmsSiteEnableSubmit(element) {
         button.disabled = !element.checked;
         if (button.disabled) {
             form.removeEventListener('submit', cmsSiteConfirmRemoval);
-            const p = document.getElementById('passphrase-container');
-            if (p) {
-                p.parentNode.removeChild(p);
-            }
         } else {
             form.addEventListener('submit', cmsSiteConfirmRemoval);
-            const button = form.querySelector('input[name=s1_submit]');
-            const p = document.createElement('p');
-            p.id = 'passphrase-container';
-            const passwd = p.appendChild(document.createElement('input'));
-            passwd.type = 'password';
-            passwd.name = 'passphrase';
-            passwd.placeholder = 'Your Password';
-            passwd.required = true;
-            button.parentNode.insertBefore(p, button);
-            passwd.focus();
         }
     }
 }
@@ -59,7 +45,17 @@ function cmsSiteEnableSubmit(element) {
 function cmsSiteConfirmRemoval(event) {
     event.preventDefault();
     const form = event.target;
-    if (confirm(decodeURIComponent(form.dataset.removeConfirm))) {
-        form.submit();
-    }
+    new Dialog(
+        'Input your password.',
+        'secret',
+        function (returnValue) {
+            if (returnValue !== null) {
+                const passwd = form.appendChild(document.createElement('input'));
+                passwd.type = 'hidden';
+                passwd.name = 'passphrase';
+                passwd.value = returnValue;
+                form.submit();
+            }
+        }
+    );
 }
