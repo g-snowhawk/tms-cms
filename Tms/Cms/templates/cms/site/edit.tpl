@@ -96,19 +96,25 @@
 
 {% block subform %}
   {% if apps.hasPermission('site.delete') and post.id is not empty %}
-    <form id="TMS-subform" action="{{ subform.action }}" method="{{ subform.method }}" enctype="{{ subform.enctype }}"{% if form.confirm %} data-confirm="{{ subform.confirm|url_encode }}"{% endif %}>
+    <form id="TMS-subform" action="{{ subform.action }}" method="{{ subform.method }}" enctype="{{ subform.enctype }}"{% if form.confirm %} data-remove-confirm="{{ subform.confirm|url_encode }}"{% endif %}>
       <input type="hidden" name="stub" value="{{ stub }}">
+      <input type="hidden" name="id" value="{{ post.id }}">
+      <input type="hidden" name="mode" value="cms.site.receive:remove">
       <p class="ta-c">
         <input type="checkbox" name="removing" value="1">
         このサイトを削除します<br>
         カテゴリ、エントリ、その他関連するすべてのデータが削除されます<br>
         <b>この操作は取り消しできません！</b>
       </p>
+      {% if err.vl_authorize == 1 %}
+      <div class="error ta-c">
+        <i>認証に失敗しました</i>
+      </div>
+      {% endif %}
       <div class="form-footer">
         <input type="submit" name="s1_submit" value="削除">
-        <input type="hidden" name="mode" value="cms.site.receive:remove">
-        <input type="hidden" name="id" value="{{ post.id }}">
       </div>
+      <script src="/common/script/cms/remove_site.js"></script>
     </form>
   {% endif %}
 {% endblock %}

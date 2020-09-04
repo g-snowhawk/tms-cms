@@ -449,6 +449,12 @@ class Site extends \Tms\Cms
      */
     protected function remove()
     {
+        $auth = new \Tms\Security('user', $this->db, $this->app->cnf('global:password_encrypt_algorithm'));
+        if (false === $auth->authentication($this->userinfo['uname'], $this->request->param('passphrase'))) {
+            $this->app->err['vl_authorize'] = 1;
+            return false;
+        }
+
         $this->db->begin();
         $sitekey = $this->request->param('id');
         $this->checkPermission('cms.site.delete', $sitekey);

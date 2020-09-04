@@ -10,6 +10,9 @@
 
 namespace Tms\Cms\Site;
 
+use P5\Http;
+use P5\Lang;
+
 /**
  * Site management request receive class.
  *
@@ -24,7 +27,7 @@ class Receive extends Response
     public function select()
     {
         parent::changeSite();
-        \P5\Http::redirect($this->app->systemURI());
+        Http::redirect($this->app->systemURI());
     }
 
     /**
@@ -33,8 +36,8 @@ class Receive extends Response
     public function save()
     {
         if (parent::save()) {
-            $this->session->param('messages', \P5\Lang::translate('SUCCESS_SAVED'));
-            \P5\Http::redirect($this->app->systemURI().'?mode=cms.site.response');
+            $this->session->param('messages', Lang::translate('SUCCESS_SAVED'));
+            Http::redirect($this->app->systemURI().'?mode=cms.site.response');
         }
         $this->edit();
     }
@@ -45,8 +48,10 @@ class Receive extends Response
     public function remove()
     {
         if (parent::remove()) {
-            $this->session->param('messages', \P5\Lang::translate('SUCCESS_REMOVED'));
+            $this->session->param('messages', Lang::translate('SUCCESS_REMOVED'));
+            Http::redirect($this->app->systemURI().'?mode=cms.site.response');
         }
-        \P5\Http::redirect($this->app->systemURI().'?mode=cms.site.response');
+        $this->request->param('convert_request_method', 'get');
+        $this->edit();
     }
 }
