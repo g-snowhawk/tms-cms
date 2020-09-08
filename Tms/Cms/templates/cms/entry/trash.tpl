@@ -1,7 +1,6 @@
 {% extends "master.tpl" %}
 
 {% block head %}
-  <script src="{{ config.global.assets_path }}script/fix_thead_vertical_scroll.js"></script>
   <script src="{{ config.global.assets_path }}script/trash.js"></script>
 {% endblock %}
 
@@ -22,37 +21,39 @@
     <div class="explorer-mainframe">
       <div class="explorer-list">
         <h2 class="headline">ごみ箱</h2>
-        <table class="ftv-table">
-          <thead>
-            <tr>
-              <td>タイトル</td>
-              <td>&nbsp;</td>
-            </tr>
-          </thead>
-          <tbody>
-          {% for unit in items %}
-            <tr class="{{ unit.kind == 'category' ? 'folder' : 'file' }}{% if unit.status is not empty %} {{ unit.status }}{% endif %}">
-              {% if unit.kind == 'category' %}
-                <td class="link with-icon spacer"><a>{{ unit.title }}</a></td>
-              {% else %}
-                <td class="link with-icon spacer"><a>{{ unit.title }}</a></td>
-              {% endif %}
-              {% if unit.kind == 'category' and apps.hasPermission('cms.category.delete', null, session.current_category) %}
-                <td class="button"><label><input type="checkbox" name="rewind[]" value="cms:{{ unit.kind }}:{{ unit.id }}" class="invisible">戻す</label></td>
-              {% elseif unit.kind == 'entry' and apps.hasPermission('cms.entry.delete', null, unit.parent) %}
-                <td class="button"><label><input type="checkbox" name="rewind[]" value="cms:{{ unit.kind }}:{{ unit.id }}" class="invisible">戻す</label></td>
-              {% else %}
-                <td class="button">&nbsp;</td>
-              {% endif %}
-            </tr>
-          {% else %}
-            <tr>
-              <td class="nowrap empty">ごみ箱は空です</td>
-              <td></td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+        <div class="explorer-body">
+          <table>
+            <thead>
+              <tr>
+                <td>タイトル</td>
+                <td>&nbsp;</td>
+              </tr>
+            </thead>
+            <tbody>
+            {% for unit in items %}
+              <tr class="{{ unit.kind == 'category' ? 'folder' : 'file' }}{% if unit.status is not empty %} {{ unit.status }}{% endif %}">
+                {% if unit.kind == 'category' %}
+                  <td class="link with-icon spacer"><a>{{ unit.title }}</a></td>
+                {% else %}
+                  <td class="link with-icon spacer"><a>{{ unit.title }}</a></td>
+                {% endif %}
+                {% if unit.kind == 'category' and apps.hasPermission('cms.category.delete', null, session.current_category) %}
+                  <td class="button"><label><input type="checkbox" name="rewind[]" value="cms:{{ unit.kind }}:{{ unit.id }}" class="invisible">戻す</label></td>
+                {% elseif unit.kind == 'entry' and apps.hasPermission('cms.entry.delete', null, unit.parent) %}
+                  <td class="button"><label><input type="checkbox" name="rewind[]" value="cms:{{ unit.kind }}:{{ unit.id }}" class="invisible">戻す</label></td>
+                {% else %}
+                  <td class="button">&nbsp;</td>
+                {% endif %}
+              </tr>
+            {% else %}
+              <tr>
+                <td class="nowrap empty">ごみ箱は空です</td>
+                <td></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
         <div class="footer-controls">
           <nav class="links">
             {% if items|length > 0 %}

@@ -1,14 +1,11 @@
 {% extends "master.tpl" %}
 
-{% block head %}
-  <script src="{{ config.global.assets_path }}script/fix_thead_vertical_scroll.js"></script>
-{% endblock %}
-
 {% block main %}
   <input type="hidden" name="mode" value="cms.template.receive:remove">
   <div class="explorer-list">
     <h1 class="headline">テンプレート一覧</h1>
-      <table class="ftv-table">
+    <div class="explorer-body">
+      <table>
         <thead>
           <tr>
             <td>タイプ</td>
@@ -53,20 +50,21 @@
           {% endfor %}
         </tbody>
       </table>
-      <div class="footer-controls">
-        <nav class="links">
-          {% if apps.hasPermission('cms.template.create') %}
-            <a href="?mode=cms.template.response:edit"><mark>+</mark>新規テンプレート</a>
-          {% endif %}
-          {% if apps.hasPermission('root') %}
-            <a href="?mode=cms.template.receive:export" class="post-request">エクスポート</a>
-          {% else %}
-            <span>&nbsp;</span>
-          {% endif %}
-        </nav>
-        <nav class="pagination">
-          {% include 'pagination.tpl' %}
-        </nav>
-      </div>
+    </div>
+    <div class="footer-controls">
+      <nav class="links">
+        {% if apps.hasPermission('cms.template.create') %}
+          <a href="?mode=cms.template.response:edit"><mark>+</mark>新規テンプレート</a>
+        {% endif %}
+        {% if apps.hasPermission('root') %}
+          <a href="?mode=cms.template.receive:export" class="post-request">エクスポート</a>
+        {% else %}
+          <span>&nbsp;</span>
+        {% endif %}
+      </nav>
+      <nav class="pagination">
+        {% include 'pagination.tpl' %}
+      </nav>
+    </div>
   </div>
 {% endblock %}

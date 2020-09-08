@@ -1,7 +1,6 @@
 {% extends "master.tpl" %}
 
 {% block head %}
-  <script src="{{ config.global.assets_path }}script/fix_thead_vertical_scroll.js"></script>
   <script src="{{ config.global.assets_path }}script/cms/explorer.js"></script>
 {% endblock %}
 
@@ -41,35 +40,37 @@
             {% endif %}
           {% endfor %}
         </h2>
-        <table class="ftv-table">
-          <thead>
-            <tr>
-              <td>ファイル名</td>
-              <td>サイズ</td>
-              <td>更新日</td>
-              <td>&nbsp;</td>
-            </tr>
-          </thead>
-          <tbody>
-          {% for unit in files %}
-            <tr class="{{ unit.kind }}">
-              {% if unit.kind == 'folder' %}
-                <td class="link spacer with-icon"><a href="?mode=cms.file-manager.receive:set-directory&amp;path={{ unit.path|url_encode }}" class="renamable">{{ unit.name }}</a></td>
-              {% else %}
-                <td class="link spacer with-icon"><span class="renamable">{{ unit.name }}</span></td>
-              {% endif %}
-              <td class="date">{{ unit.size }}</td>
-              <td class="date">{{ unit.modify_date|date('Y年n月j日 H:i') }}</td>
-              <td class="button reddy"><label><input type="radio" name="delete" value="{{ unit.kind }}:{{ unit.name }}">削除</label></td>
-            </tr>
-          {% else %}
-            <tr>
-              <td class="nowrap empty" colspan="3">ファイルがありません</td>
-              <td></td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+        <div class="explorer-body">
+          <table>
+            <thead>
+              <tr>
+                <td>ファイル名</td>
+                <td>サイズ</td>
+                <td>更新日</td>
+                <td>&nbsp;</td>
+              </tr>
+            </thead>
+            <tbody>
+            {% for unit in files %}
+              <tr class="{{ unit.kind }}">
+                {% if unit.kind == 'folder' %}
+                  <td class="link spacer with-icon"><a href="?mode=cms.file-manager.receive:set-directory&amp;path={{ unit.path|url_encode }}" class="renamable">{{ unit.name }}</a></td>
+                {% else %}
+                  <td class="link spacer with-icon"><span class="renamable">{{ unit.name }}</span></td>
+                {% endif %}
+                <td class="date">{{ unit.size }}</td>
+                <td class="date">{{ unit.modify_date|date('Y年n月j日 H:i') }}</td>
+                <td class="button reddy"><label><input type="radio" name="delete" value="{{ unit.kind }}:{{ unit.name }}">削除</label></td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="nowrap empty" colspan="3">ファイルがありません</td>
+                <td></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
         <div class="footer-controls">
           <nav class="links">
             <a href="?mode=cms.file-manager.response:add-folder" class="subform-opener"><i class="mark">+</i>新規フォルダ</a>
