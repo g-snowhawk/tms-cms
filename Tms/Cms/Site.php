@@ -75,6 +75,11 @@ class Site extends \Tms\Cms
         $site_data['uploaddir'] = trim($site_data['uploaddir'],'/');
         $site_data['styledir'] = trim($site_data['styledir'],'/');
 
+        // Convert to URL
+        $uri = parse_url($site_data['url']);
+        $site_data['uploadurl'] = $uri['path'].$site_data['uploaddir'].'/';
+        $site_data['styleurl'] = $uri['path'].$site_data['styledir'].'/';
+
         $site_data['owner'] = $this->ownerInfo($id);
 
         return $site_data;
