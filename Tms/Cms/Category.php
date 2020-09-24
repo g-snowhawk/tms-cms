@@ -351,7 +351,7 @@ class Category extends Template
      *
      * @param int $id
      */
-    protected function setCategory($id = null)
+    public function setCategory($id = null)
     {
         $previous = $this->session->param('current_category');
         if (is_null($id)) {

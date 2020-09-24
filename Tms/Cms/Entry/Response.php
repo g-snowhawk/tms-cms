@@ -21,6 +21,7 @@ use P5\Lang;
  */
 class Response extends \Tms\Cms\Entry
 {
+    const DEFAULT_VIEW_ID = 'cms-entry-default';
     /**
      * Object Constructor.
      */
@@ -42,7 +43,7 @@ class Response extends \Tms\Cms\Entry
     {
         $this->checkPermission('cms.entry.read', $this->siteID, $this->site_root);
 
-        $plugins = $this->app->execPlugin('prepareDefaultView', $id);
+        $plugins = $this->app->execPlugin('prepareDefaultView', self::DEFAULT_VIEW_ID);
 
         // Change category when current category is system reserved
         $reserved = $this->db->get('reserved', 'category', 'id=?', [$this->session->param('current_category')]);
@@ -83,7 +84,7 @@ class Response extends \Tms\Cms\Entry
         if ($this->isAjax) {
             return $this->view->render('cms/entry/default.tpl', true);
         }
-        parent::defaultView('cms-entry-default');
+        parent::defaultView(self::DEFAULT_VIEW_ID);
     }
 
     /**
