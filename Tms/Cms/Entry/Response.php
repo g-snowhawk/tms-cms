@@ -42,6 +42,8 @@ class Response extends \Tms\Cms\Entry
     {
         $this->checkPermission('cms.entry.read', $this->siteID, $this->site_root);
 
+        $plugins = $this->app->execPlugin('prepareDefaultView', $id);
+
         // Change category when current category is system reserved
         $reserved = $this->db->get('reserved', 'category', 'id=?', [$this->session->param('current_category')]);
         if ($reserved === '1') {
