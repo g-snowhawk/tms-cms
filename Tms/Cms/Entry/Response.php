@@ -10,6 +10,7 @@
 
 namespace Tms\Cms\Entry;
 
+use P5\File;
 use P5\Http;
 use P5\Lang;
 
@@ -288,9 +289,20 @@ class Response extends \Tms\Cms\Entry
 
     public function ajaxImageList()
     {
-        $list = $this->imageList('0');
-        header('Content-type: text/plain; charset=utf-8');
-        echo json_encode($list);
+        $response = [
+            'status' => 0,
+            'upload_max_filesize' => File::str2bytes(ini_get('upload_max_filesize')),
+            'post_max_size' => File::str2bytes(ini_get('post_max_size')),
+        ]; 
+        if (false !== $list = $this->imageList('0')) {
+            $response['list'] = $list;
+        } else {
+            $response['status'] = 1;
+            $response['message'] = 'Database Error';
+        }
+
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($response);
         exit;
     }
 

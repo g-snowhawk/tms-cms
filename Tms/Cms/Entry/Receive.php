@@ -94,7 +94,7 @@ class Receive extends Response
 
         if (strtolower(Environment::server('HTTP_X_REQUESTED_WITH')) === 'xmlhttprequest') {
             Http::nocache();
-            header('Content-type:text/plain;charset=utf-8');
+            header('Content-type: application/json; charset=utf-8');
             $json = ['callback' => $this->request->param('callback'), 'data' => $result];
             echo json_encode($json);
             exit;
@@ -116,7 +116,7 @@ class Receive extends Response
 
         if (strtolower(Environment::server('HTTP_X_REQUESTED_WITH')) === 'xmlhttprequest') {
             Http::nocache();
-            header('Content-type:text/plain;charset=utf-8');
+            header('Content-type: application/json; charset=utf-8');
             $json = ['callback' => $this->request->param('callback'), 'data' => $result];
             echo json_encode($json);
             exit;
@@ -219,15 +219,19 @@ class Receive extends Response
 
     public function ajaxUploadImage()
     {
-        $response = '';
-        if (false !== $this->saveFiles('0')) {
-            $list = $this->imageList('0');
-            $response = json_encode($list);
+        $response = ['status' => 1];
+        if (false !== $this->saveFiles('0', null, $error)) {
+            if (false !== $list = $this->imageList('0')) {
+                $response['status'] = 0;
+                $response['list'] = $list;
+            } else {
+                $response['message'] = 'Database Error';
+            }
         } else {
-            $response = 'Upload Failure';
+            $response['message'] = $error;
         }
-        header('Content-type: text/plain; charset=utf-8');
-        echo $response;
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($response);
         exit;
     }
 
@@ -238,16 +242,38 @@ class Receive extends Response
         $upload_dir = $this->fileUploadDir();
         $file = $this->db->get('data', 'custom', 'id = ?', [$id]);
         $path = $upload_dir.'/'.basename($file);
-        if (file_exists($path)) {
-            unlink($path);
+
+        $response = ['status' => 1];
+
+        clearstatcache(true, $upload_dir);
+        if (true !== is_writable($upload_dir)) {
+            $response['message'] = 'Permission denied';
+        } else {
+            $this->db->begin();
+            if (false !== $this->db->delete('custom', 'id = ?', [$id])) {
+                $response['id'] = $id;
+                $response['status'] = 0;
+                if (file_exists($path)) {
+                    try {
+                        unlink($path);
+                        $this->db->commit();
+                    } catch (\ErrorException $e) {
+                        $response['message'] = 'System Error';
+                        trigger_error($e->getMessage());
+                    }
+                }
+            } else {
+                $response['message'] = 'Database Error';
+                trigger_error($this->db->error());
+            }
+
+            if ($response['status'] !== 0) {
+                $this->db->rollback();
+            }
         }
 
-        $response = 'Delete Failure';
-        if ($this->db->delete('custom', 'id = ?', [$id])) {
-            $response = json_encode(['id' => $id, 'status' => 'success']);
-        }
-        header('Content-type: text/plain; charset=utf-8');
-        echo $response;
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($response);
         exit;
     }
 
@@ -284,7 +310,7 @@ class Receive extends Response
             'status' => $status,
             'message' => $message,
         ];
-        header('Content-type: text/plain; charset=utf-8');
+        header('Content-type: application/json; charset=utf-8');
         echo json_encode($response);
         exit;
     }
@@ -309,7 +335,7 @@ class Receive extends Response
             'status' => $status,
             'message' => $message,
         ];
-        header('Content-type: text/plain; charset=utf-8');
+        header('Content-type: application/json; charset=utf-8');
         echo json_encode($response);
         exit;
     }

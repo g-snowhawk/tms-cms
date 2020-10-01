@@ -207,12 +207,17 @@ class Entry extends Category
      *
      * @return mixed
      */
-    protected function saveFiles($entrykey, $sectionkey = null)
+    protected function saveFiles($entrykey, $sectionkey = null, &$error = null)
     {
         $kind = (empty($sectionkey)) ? 'entry' : 'section';
         $count = 0;
 
         $upload_dir = $this->fileUploadDir($entrykey, $sectionkey);
+        clearstatcache(true, $upload_dir);
+        if (true !== is_writable($upload_dir)) {
+            $error = 'Permission denied';
+            return false;
+        }
 
         $delete = $this->request->param('delete');
         $note = $this->request->param('note');
@@ -221,6 +226,20 @@ class Entry extends Category
         $sort = 0;
         if (isset($_FILES['file'])) {
             foreach ($_FILES['file']['name'] as $key => $name) {
+
+                switch ($_FILES['file']['error'][$key]) {
+                case UPLOAD_ERR_OK:
+                case UPLOAD_ERR_NO_FILE:
+                    break;
+                case UPLOAD_ERR_INI_SIZE:
+                case UPLOAD_ERR_FORM_SIZE:
+                    $error = 'File size is too large';
+                    return false;
+                default:
+                    $error = 'File upload failed';
+                    return false;
+                }
+
                 $id = str_replace('id_', '', $key);
                 $save_data = ['sort' => $sort];
 
@@ -235,7 +254,7 @@ class Entry extends Category
                 }
 
                 $old = $this->db->get('data,mime,option1', 'custom', 'sitekey = ? AND id = ?', [$this->siteID, $id]);
-                $old_path = $upload_dir.'/'.basename($old['data']);
+                $old_path = (false !== $old) ? $upload_dir.'/'.basename($old['data']) : null;
 
                 if (empty($name)) {
 
@@ -244,7 +263,7 @@ class Entry extends Category
                     }
 
                     if (isset($delete[$key])) {
-                        if (file_exists($old_path) && is_file($old_path)) {
+                        if (!empty($old_path) && file_exists($old_path) && is_file($old_path)) {
                             unlink($old_path);
                         }
 
@@ -257,6 +276,7 @@ class Entry extends Category
 
                         if (false === $ret = $this->db->delete('custom', 'sitekey = ? AND id = ?', [$this->siteID, $delete[$key]])) {
                             trigger_error($this->db->error());
+                            $error = 'Database Error';
 
                             return false;
                         }
@@ -265,6 +285,7 @@ class Entry extends Category
                     }
                     if (false === $ret = $this->db->update('custom', $save_data, 'sitekey = ? AND id = ?', [$this->siteID, $id], [])) {
                         trigger_error($this->db->error());
+                        $error = 'Database Error';
 
                         return false;
                     }
@@ -311,6 +332,7 @@ class Entry extends Category
                 if (strpos($key, 'id_') === 0) {
                     if (false === $ret = $this->db->update('custom', $save_data, 'sitekey = ? AND id = ?', [$this->siteID, $id], [])) {
                         trigger_error($this->db->error());
+                        $error = 'Database Error';
 
                         return false;
                     }
@@ -319,6 +341,7 @@ class Entry extends Category
                 else {
                     if (false === $ret = $this->db->insert('custom', $save_data, [])) {
                         trigger_error($this->db->error());
+                        $error = 'Database Error';
 
                         return false;
                     }
@@ -348,8 +371,7 @@ class Entry extends Category
                     }
 
                     $count += $diff;
-                }
-                else {
+                } else {
                     trigger_error("File upload Failure `$upload_path'");
 
                     return false;
