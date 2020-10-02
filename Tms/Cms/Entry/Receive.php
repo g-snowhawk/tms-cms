@@ -220,8 +220,8 @@ class Receive extends Response
     public function ajaxUploadImage()
     {
         $response = ['status' => 1];
-        if (false !== $this->saveFiles('0', null, $error)) {
-            if (false !== $list = $this->imageList('0')) {
+        if (false !== $this->saveFiles('-1', null, $error)) {
+            if (false !== $list = $this->imageList('-1')) {
                 $response['status'] = 0;
                 $response['list'] = $list;
             } else {

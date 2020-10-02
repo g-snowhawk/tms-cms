@@ -1197,6 +1197,16 @@ class Category extends Template
             return $total;
         }
         foreach ($data as $key => $value) {
+            if (empty($value)) {
+                if (false === $count = $this->db->delete('custom', 'sitekey = ? AND relkey = ? AND kind = ? AND name = ?', [$this->siteID, $id, $kind, $key])) {
+                    trigger_error($this->db->error());
+
+                    return false;
+                }
+                $total += $count;
+                continue;
+            }
+
             $unit = [
                 'sitekey' => $this->siteID,
                 'relkey' => $id,
@@ -1205,6 +1215,7 @@ class Category extends Template
                 'mime' => 'text/plain',
                 'data' => $value,
             ];
+
             if (false === $count = $this->db->updateOrInsert('custom', $unit, ['sitekey', 'relkey', 'kind', 'name'])) {
                 trigger_error($this->db->error());
 

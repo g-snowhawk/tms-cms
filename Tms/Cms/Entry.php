@@ -212,7 +212,12 @@ class Entry extends Category
         $kind = (empty($sectionkey)) ? 'entry' : 'section';
         $count = 0;
 
-        $upload_dir = $this->fileUploadDir($entrykey, $sectionkey);
+        $subdir = ($entrykey < 0) ? 'stock' : $entrykey;
+        if ($entrykey === 'preview') {
+            $entrykey = 0;
+        }
+
+        $upload_dir = $this->fileUploadDir($subdir, $sectionkey);
         clearstatcache(true, $upload_dir);
         if (true !== is_writable($upload_dir)) {
             $error = 'Permission denied';

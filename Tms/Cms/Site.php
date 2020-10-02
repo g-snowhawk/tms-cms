@@ -10,6 +10,8 @@
 
 namespace Tms\Cms;
 
+use ErrorException;
+
 /**
  * Site management class.
  *
@@ -316,9 +318,9 @@ class Site extends \Tms\Cms
         try {
             $xml_source = file_get_contents($default_templates_xml);
             if (false === $xml = simplexml_load_string($xml_source)) {
-                throw new \ErrorException('Failed to parse XML');
+                throw new ErrorException('Failed to parse XML');
             }
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             $message = $e->getMessage();
             if (stripos($message, 'No such file or directory') !== false) {
                 return true;
@@ -470,10 +472,10 @@ class Site extends \Tms\Cms
             $results = $this->app->execPlugin('beforeRemoveCmsSite', $sitekey);
             foreach ((array)$results as $result) {
                 if ($result === false) {
-                    throw new \ErrorException('Some error in exec plugins');
+                    throw new ErrorException('Some error in exec plugins');
                 }
             }
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             return false;
         }
 
@@ -498,7 +500,7 @@ class Site extends \Tms\Cms
         foreach ($remove_dirs as $remove_dir) {
             try {
                 \P5\File::rmdirs($remove_dir, true);
-            } catch (\ErrorException $e) {
+            } catch (ErrorException $e) {
                 if (count(glob("$remove_dir/*")) > 0) {
                     return false;
                 }
@@ -510,10 +512,10 @@ class Site extends \Tms\Cms
             $results = $this->app->execPlugin('afterRemoveCmsSite', $sitekey);
             foreach ((array)$results as $result) {
                 if ($result === false) {
-                    throw new \ErrorException('Some error in exec plugins');
+                    throw new ErrorException('Some error in exec plugins');
                 }
             }
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             return false;
         }
 
@@ -584,6 +586,14 @@ class Site extends \Tms\Cms
                 $sectionkey
             ])
         );
+
+        if (!file_exists($path)) {
+            try {
+                mkdir($path, 0777, true);
+            } catch (ErrorException $e) {
+                // Nop
+            }
+        }
 
         return $path;
     }

@@ -294,7 +294,7 @@ class Response extends \Tms\Cms\Entry
             'upload_max_filesize' => File::strTobytes(ini_get('upload_max_filesize')),
             'post_max_size' => File::strTobytes(ini_get('post_max_size')),
         ]; 
-        if (false !== $list = $this->imageList('0')) {
+        if (false !== $list = $this->imageList('-1')) {
             $response['list'] = $list;
         } else {
             $response['status'] = 1;

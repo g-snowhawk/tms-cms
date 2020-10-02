@@ -71,6 +71,7 @@ html.entry-edit #previewScreen {
 html.entry-edit #previewScreen iframe {
   border: 0 none;
   height: 100%;
+  vertical-align: top;
   width: 100%;
 }
 html.entry-edit #previewControler {
@@ -87,7 +88,7 @@ html.entry-edit #previewControler input {
   -moz-appearance: none;
   appearance: none;
   background-color: rgba(0,0,0,.5);
-  border: 0 none;
+  border: 1px solid rgba(255,255,255,0.7);
   border-radius: 4px;
   box-sizing: border-box;
   color: #fff;
@@ -100,7 +101,8 @@ html.entry-edit #previewControler input {
 }
 html.entry-edit #previewControler input:focus,
 html.entry-edit #previewControler input:hover {
-  background-color: rgba(0,0,0,.8);
+  background-color: rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,1);
 }
 
 #section-edit #body {
