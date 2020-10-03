@@ -8,4 +8,4 @@ SELECT id, title, 'entry' AS kind
  WHERE trash = '1'
    AND sitekey = :site_id
    AND revision = :revision
- ORDER BY kind, title; 
+ ORDER BY kind, title 

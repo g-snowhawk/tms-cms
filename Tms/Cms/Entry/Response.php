@@ -10,6 +10,7 @@
 
 namespace Tms\Cms\Entry;
 
+use P5\Environment;
 use P5\File;
 use P5\Http;
 use P5\Lang;
@@ -22,6 +23,7 @@ use P5\Lang;
  */
 class Response extends \Tms\Cms\Entry
 {
+    const DEFAULT_MODE = 'cms.entry.response';
     const DEFAULT_VIEW_ID = 'cms-entry-default';
     /**
      * Object Constructor.
@@ -59,20 +61,8 @@ class Response extends \Tms\Cms\Entry
             $this->setCategory($this->session->param('current_category'));
         }
 
-        $sql = file_get_contents(__DIR__ . '/default.sql');
-
-        // Sort order
-        $sort_option = '';
-        if ($this->session->param('cms_entry_list_order')) {
-            $sort_option = ','.$this->session->param('cms_entry_list_order');
-        }
-        elseif ($this->app->cnf('application:cms_entry_list_order')) {
-            $sort_option = ','.$this->app->cnf('application:cms_entry_list_order');
-        }
-        $sql = str_ireplace('{{ sort_option }}', $sort_option, $sql);
-
-        $entry = $this->db->getAll($sql, ['user_id' => $this->uid, 'site_id' => $this->siteID, 'category_id' => $this->categoryID, 'revision' => 0]);
-        $this->view->bind('entries', $entry);
+        $this->pager->setLinkFormat($this->app->systemURI().'?mode='.self::DEFAULT_MODE.'&p=%d');
+        $this->view->bind('pager', $this->pager);
 
         $form = $this->view->param('form');
         $form['confirm'] = Lang::translate('CONFIRM_DELETE_DATA');
@@ -313,18 +303,16 @@ class Response extends \Tms\Cms\Entry
 
     public function trash()
     {
-        $sql = file_get_contents(__DIR__ . '/trash.sql');
-
-        $items = $this->db->getAll($sql, ['user_id' => $this->uid, 'site_id' => $this->siteID, 'revision' => 0]);
-        if (false === $items) {
-            echo $this->db->error();
-        }
-        $this->view->bind('items', $items);
-
         $form = $this->view->param('form');
         $form['confirm'] = Lang::translate('CONFIRM_DELETE_DATA');
         $this->view->bind('form', $form);
 
+        if ($cookie = Environment::cookie('script_referer')) {
+            $this->view->bind('referer', $cookie);
+        }
+
+        $this->pager->setLinkFormat($this->app->systemURI().'?mode=cms.entry.response:trash&p=%d');
+        $this->view->bind('pager', $this->pager);
         //$this->view->bind('err', $this->app->err);
 
         $this->setHtmlId('cms-trash');

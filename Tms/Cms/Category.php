@@ -417,8 +417,8 @@ class Category extends Template
             $columns[] = 'children.'.$column;
         }
         $columns = implode(',', $columns);
-        $columns .= ',(SELECT COUNT(*) FROM table::entry WHERE sitekey = :site_id AND category = children.id AND revision = 0 GROUP BY category) AS cnt';
-        $columns .= ',(SELECT COUNT(*) FROM table::entry WHERE sitekey = :site_id AND category = children.id AND active = 1 GROUP BY category) AS active_cnt';
+        $columns .= ",(SELECT COUNT(*) FROM table::entry WHERE sitekey = :site_id AND category = children.id AND revision = 0 AND trash <> '1' GROUP BY category) AS cnt";
+        $columns .= ",(SELECT COUNT(*) FROM table::entry WHERE sitekey = :site_id AND category = children.id AND active = 1 AND trash <> '1' GROUP BY category) AS active_cnt";
 
         if (is_null($id)) {
             if ($this->isAdmin() || $this->site_data['noroot'] !== '1') {

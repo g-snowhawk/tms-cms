@@ -1204,4 +1204,75 @@ class Entry extends Category
 
         return $categorykey;
     }
+
+    public function entriesList(int $limit)
+    {
+        $sql = file_get_contents(__DIR__ . '/Entry/default.sql');
+
+        // Sort order
+        $sort_option = '';
+        if ($this->session->param('cms_entry_list_order')) {
+            $sort_option = ','.$this->session->param('cms_entry_list_order');
+        }
+        elseif ($this->app->cnf('application:cms_entry_list_order')) {
+            $sort_option = ','.$this->app->cnf('application:cms_entry_list_order');
+        }
+        $sql = str_ireplace('{{ sort_option }}', $sort_option, $sql);
+
+        $replaces = [
+            'user_id' => $this->uid,
+            'site_id' => $this->siteID,
+            'category_id' => $this->categoryID,
+            'revision' => 0
+        ];
+
+        $total = $this->db->recordCount($sql, $replaces);
+        $this->pager->init($total, $limit);
+        $current_page = (int)$this->request->param('p');
+        if (empty($current_page)) {
+            $current_page = 1;
+        }
+        $this->pager->setCurrentPage($current_page);
+
+        $offset = $limit * ($current_page - 1);
+
+        if (!empty($limit)) {
+            $sql .= " LIMIT {$offset},{$limit}";
+        }
+
+        return $this->db->getAll($sql, $replaces);
+    }
+
+    public function trashItems(int $limit)
+    {
+        $sql = file_get_contents(__DIR__ . '/Entry/trash.sql');
+
+        // Sort order
+        $sort_option = '';
+        if ($this->session->param('cms_entry_list_order')) {
+            $sort_option = ','.$this->session->param('cms_entry_list_order');
+        }
+        elseif ($this->app->cnf('application:cms_entry_list_order')) {
+            $sort_option = ','.$this->app->cnf('application:cms_entry_list_order');
+        }
+        $sql = str_ireplace('{{ sort_option }}', $sort_option, $sql);
+
+        $replaces = ['user_id' => $this->uid, 'site_id' => $this->siteID, 'revision' => 0];
+
+        $total = $this->db->recordCount($sql, $replaces);
+        $this->pager->init($total, $limit);
+        $current_page = (int)$this->request->param('p');
+        if (empty($current_page)) {
+            $current_page = 1;
+        }
+        $this->pager->setCurrentPage($current_page);
+
+        $offset = $limit * ($current_page - 1);
+
+        if (!empty($limit)) {
+            $sql .= " LIMIT {$offset},{$limit}";
+        }
+
+        return $this->db->getAll($sql, $replaces);
+    }
 }

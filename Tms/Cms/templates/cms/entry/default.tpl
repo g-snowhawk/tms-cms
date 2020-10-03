@@ -33,7 +33,7 @@
               </tr>
             </thead>
             <tbody>
-            {% for unit in entries %}
+            {% for unit in apps.entriesList(50) %}
               <tr class="{{ unit.kind == 'category' ? 'folder' : 'file' }}{% if unit.status is not empty %} {{ unit.status }}{% endif %}">
                 {% if unit.kind == 'category' %}
                   <td class="link with-icon spacer"><a href="?mode=cms.entry.receive:setCategory&amp;id={{ unit.id|url_encode }}">{{ unit.title }}</a></td>

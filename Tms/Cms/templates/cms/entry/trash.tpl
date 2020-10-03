@@ -12,7 +12,7 @@
         <h1 class="headline">カテゴリ一覧</h1>
         <nav>
           <ul>
-            <li><a href="?mode=cms.entry.response">・ページ一覧</a></li>
+            <li><a href="{{ referer is defined ? referer : '?mode=cms.entry.response' }}">・ページ一覧</a></li>
             <li><a class="current">・ごみ箱</a></li>
           </ul>
         </nav>
@@ -30,7 +30,7 @@
               </tr>
             </thead>
             <tbody>
-            {% for unit in items %}
+            {% for unit in apps.trashItems(50) %}
               <tr class="{{ unit.kind == 'category' ? 'folder' : 'file' }}{% if unit.status is not empty %} {{ unit.status }}{% endif %}">
                 {% if unit.kind == 'category' %}
                   <td class="link with-icon spacer"><a>{{ unit.title }}</a></td>
