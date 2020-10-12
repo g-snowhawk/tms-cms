@@ -239,7 +239,8 @@ class Receive extends Response
     {
         $id = $this->request->param('id');
 
-        $upload_dir = $this->fileUploadDir();
+        $subdir = 'stock';
+        $upload_dir = $this->fileUploadDir($subdir);
         $file = $this->db->get('data', 'custom', 'id = ?', [$id]);
         $path = $upload_dir.'/'.basename($file);
 
@@ -253,14 +254,14 @@ class Receive extends Response
             if (false !== $this->db->delete('custom', 'id = ?', [$id])) {
                 $response['id'] = $id;
                 $response['status'] = 0;
-                if (file_exists($path)) {
-                    try {
+                try {
+                    if (file_exists($path)) {
                         unlink($path);
-                        $this->db->commit();
-                    } catch (\ErrorException $e) {
-                        $response['message'] = 'System Error';
-                        trigger_error($e->getMessage());
                     }
+                    $this->db->commit();
+                } catch (\ErrorException $e) {
+                    $response['message'] = 'System Error';
+                    trigger_error($e->getMessage());
                 }
             } else {
                 $response['message'] = 'Database Error';
