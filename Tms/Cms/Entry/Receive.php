@@ -294,14 +294,16 @@ class Receive extends Response
     public function trash() 
     {
         $identifier = $this->request->param('identifier');
+        $entrykey = $this->db->get('id', 'entry', 'identifier = ? AND active = ?', [$identifier, 1]);
 
         $options = [
             'statement' => 'id = ? OR identifier = ?',
             'replaces' => [$identifier, $identifier],
         ];
         $status = (
-            $this->toPrivate($identifier) &&
-            parent::intoTrash('entry', $identifier, $options)
+            (empty($entrykey) || $this->toPrivate($entrykey))
+            && false !== $this->db->delete('entry', 'identifier = ? AND identifier != id', [$identifier])
+            && parent::intoTrash('entry', $identifier, $options)
         ) ? 0 : 1;
 
         $message = $status > 0
@@ -325,7 +327,6 @@ class Receive extends Response
             'replaces' => [$identifier, $identifier],
         ];
         $status = (
-            $this->toPrivate($identifier) &&
             parent::intoTrash('entry', $identifier, $options, '0')
         ) ? 0 : 1;
 

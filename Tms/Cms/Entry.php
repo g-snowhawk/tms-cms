@@ -214,6 +214,7 @@ class Entry extends Category
 
         $subdir = ($entrykey < 0) ? 'stock' : $entrykey;
         if ($entrykey === 'preview') {
+            $subdir = $entrykey;
             $entrykey = 0;
         }
 
@@ -397,6 +398,9 @@ class Entry extends Category
      */
     protected function removeFiles($entrykey, $sectionkey = null)
     {
+        if (empty($entrykey)) {
+            trigger_error('Unexpected error', E_USER_ERROR);
+        }
         $upload_dir = $this->fileUploadDir($entrykey, $sectionkey);
         return \P5\File::rmdir($upload_dir, true);
     }
@@ -467,7 +471,7 @@ class Entry extends Category
                 }
 
                 foreach ($deletes as $delete) {
-                    \P5\File::rmdir("$upload_dir/{$delete['id']}", true);
+                    $this->removeFiles($delete['id']);
                     // Custom fields
                     if (false === $this->db->delete('custom', 'sitekey = ? AND kind = ? AND relkey = ?', [$sid, 'entry', $delete['id']])) {
                         trigger_error($this->db->error());
@@ -618,7 +622,7 @@ class Entry extends Category
 
             if (false !== $deletes = $this->db->select('id, entrykey', self::SECTION_TABLE, "WHERE sitekey = ? AND identifier = ? AND revision > '0' AND revision < ?", [$sid, $sectionkey, $limit])) {
                 foreach ($deletes as $delete) {
-                    \P5\File::rmdir("$upload_dir/{$delete['entrykey']}/{$delete['id']}", true);
+                    $this->removeFiles($delete['entrykey'], $delete['id']);
                     // Custom fields
                     if (false === $this->db->delete('custom', 'sitekey = ? AND kind = ? AND relkey = ?', [$sid, 'section', $delete['id']])) {
                         trigger_error($this->db->error());
@@ -982,15 +986,12 @@ class Entry extends Category
      */
     public function removePreviewImages()
     {
-        $upload_dir = $this->fileUploadDir('preview');
-        if (file_exists($upload_dir)) {
-            $this->db->delete(
-                'custom',
-                'sitekey = ? AND relkey = ? AND kind = ? AND name LIKE ?',
-                [$this->siteID, 0, 'entry', 'file.%']
-            );
-            \P5\File::rmdir($upload_dir, true);
-        }
+        $this->db->delete(
+            'custom',
+            'sitekey = ? AND relkey = ? AND kind = ? AND name LIKE ?',
+            [$this->siteID, 0, 'entry', 'file.%']
+        );
+        $this->removeFiles('preview');
     }
 
     public function createRelation($entrykey, $relkey)
