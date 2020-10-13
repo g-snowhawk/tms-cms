@@ -10,6 +10,8 @@
 
 namespace Tms\Cms;
 
+use ErrorException;
+
 /**
  * Site management class.
  *
@@ -106,14 +108,16 @@ class FileManager extends Site
 
         try {
             $cwd = realpath("{$this->upload_root}/$parent");
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             return;
         }
 
         $files = [];
         $directories = [];
-        if (false !== ($dh = opendir($cwd))) {
-            while (false !== ($entry = readdir($dh))) {
+
+        try {
+            $entries = scandir($cwd);
+            foreach ($entries as $entry) {
                 $path = "$cwd/$entry";
                 if (   $entry === '.'
                     || $entry === '..'
@@ -139,9 +143,11 @@ class FileManager extends Site
                     $files[] = $data;
                 }
             }
-        }
 
-        return array_merge($directories, $files);
+            return array_merge($directories, $files);
+        } catch(ErrorException $e) {
+            //
+        }
     }
 
     protected function setCurrentDirectory($path)
@@ -168,5 +174,22 @@ class FileManager extends Site
 
         $root = ($relative === false) ? $this->upload_root.'/' : '';
         return rtrim($root.ltrim($this->session->param('current_dir'),'/'),'/');
+    }
+
+    protected function directoryIsEmpty($directory, $parent): int
+    {
+        $parent = trim($parent,'/')."/$directory";
+
+        try {
+            $cwd = realpath("{$this->upload_root}/$parent");
+            $entries = scandir($cwd);
+            $skip = ['.','..'];
+
+            return count(array_diff($entries, $skip));
+        } catch(ErrorException $e) {
+            // Nop
+        }
+
+        return 0;
     }
 }
