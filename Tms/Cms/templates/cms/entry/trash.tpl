@@ -30,7 +30,8 @@
               </tr>
             </thead>
             <tbody>
-            {% for unit in apps.trashItems(50) %}
+            {% set items = apps.trashItems(50) %} 
+            {% for unit in items %}
               <tr class="{{ unit.kind == 'category' ? 'folder' : 'file' }}{% if unit.status is not empty %} {{ unit.status }}{% endif %}">
                 {% if unit.kind == 'category' %}
                   <td class="link with-icon spacer"><a>{{ unit.title }}</a></td>
