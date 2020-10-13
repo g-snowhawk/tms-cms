@@ -81,6 +81,7 @@ class Receive extends Response
         foreach ($templates as $template) {
             $attr = ($template['kind'] === '1') ? ' root="1"' : '';
             $xml .= sprintf('  <template%s>'.PHP_EOL, $attr);
+            $xml .= sprintf('    <id>%s</id>'.PHP_EOL, htmlspecialchars($template['identifier']));
             $xml .= sprintf('    <title>%s</title>'.PHP_EOL, htmlspecialchars($template['title']));
             $xml .= sprintf('    <sourcecode><![CDATA[%s]]></sourcecode>'.PHP_EOL, preg_replace("/(\r\n|\r|\n)/", PHP_EOL, $template['sourcecode']));
             $xml .= sprintf('    <kind>%d</kind>'.PHP_EOL, htmlspecialchars($template['kind']));
@@ -97,6 +98,29 @@ class Receive extends Response
         header("Content-length: {$len}");
         header("Content-type: text/xml; charset=utf-8");
         echo $xml;
+        exit;
+    }
+
+    public function import()
+    {
+        $json = ['status' => 0];
+
+        $templates_xml = $this->request->files('template_xml');
+
+        $this->db->begin();
+        if (false === parent::updateDefaultTemplate($templates_xml['tmp_name'])) {
+            $json = ['status' => 1, 'message' => 'System Error'];
+            trigger_error($this->db->error());
+        } else {
+            $this->db->commit();
+        }
+
+        if ($json['status'] > 0) {
+            $this->db->rollback();
+        }
+
+        header("Content-type: application/json; charset=utf-8");
+        echo json_encode($json);
         exit;
     }
 }

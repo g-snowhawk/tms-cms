@@ -1,5 +1,9 @@
 {% extends "master.tpl" %}
 
+{% block head %}
+  <script src="/common/script/cms/import-templates.js"></script>
+{% endblock %}
+
 {% block main %}
   <input type="hidden" name="mode" value="cms.template.receive:remove">
   <div class="explorer-list">
@@ -58,6 +62,7 @@
         {% endif %}
         {% if apps.hasPermission('root') %}
           <a href="?mode=cms.template.receive:export" class="post-request">エクスポート</a>
+          <label class="auto-uploader">インポート<input type="file" name="template_xml" accept=".xml,application/xml" data-mode="cms.template.receive:import" data-confirm="インポートを開始します。よろしいですか？"></label>
         {% else %}
           <span>&nbsp;</span>
         {% endif %}

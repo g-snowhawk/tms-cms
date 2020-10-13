@@ -368,6 +368,65 @@ class Site extends \Tms\Cms
         return $root_template;
     }
 
+    protected function updateDefaultTemplate($templates_xml)
+    {
+        try {
+            $xml_source = file_get_contents($templates_xml);
+            if (false === $xml = simplexml_load_string($xml_source)) {
+                throw new ErrorException('Failed to parse XML');
+            }
+        } catch (ErrorException $e) {
+            trigger_error($e->getMessage());
+            return false;
+        }
+
+        $sitekey = $this->session->param('current_site');
+        $root_template = null;
+        foreach ($xml->template as $unit) {
+            $save = [
+                'sitekey' => $sitekey,
+                'title' => $unit->title,
+                'sourcecode' => $unit->sourcecode,
+                'revision' => 0,
+                'active' => $unit->active,
+                'kind' => $unit->kind,
+                'path' => $unit->path,
+            ];
+            $raw = [
+                'create_date' => 'CURRENT_TIMESTAMP',
+                'modify_date' => 'CURRENT_TIMESTAMP',
+            ];
+            if (false !== $this->db->insert('template', $save, $raw)) {
+                $id = $this->db->lastInsertId(null, 'id');
+                $save['id'] = $id;
+                if (false === $this->db->update('template', ['identifier' => $id], 'id = ?', [$id])) {
+                    return false;
+                }
+            } else {
+                $save['id'] = $unit->id;
+                $raw = [
+                    'modify_date' => 'CURRENT_TIMESTAMP',
+                ];
+                if (false === $this->db->update('template', $save, 'id = ?', [$unit->id], $raw)) {
+                    return false;
+                }
+            }
+
+            // build template file
+            if ((string)$unit->active === '1') {
+                if (false === $this->buildTemplate($save, true, $sitekey)) {
+                    return false;
+                }
+            }
+
+            if ((string)$unit->attributes()->root === '1') {
+                $root_template = $save['id'];
+            }
+        }
+
+        return $root_template;
+    }
+
     /**
      * pickup site owners.
      *
