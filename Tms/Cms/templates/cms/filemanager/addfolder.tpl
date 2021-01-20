@@ -17,7 +17,7 @@
     </div>
     <div class="form-footer">
       <input type="submit" name="s1_submit" value="保存">
-      <input type="hidden" name="mode" value="cms.file-manager.receive:save-folder">
+      <input type="hidden" name="mode" value="cms.filemanager.receive:save-folder">
     </div>
   </article>
 {% endblock %}

@@ -8,7 +8,7 @@
  * https://www.plus-5.com/licenses/mit-license
  */
 
-namespace Tms\Cms\FileManager;
+namespace Tms\Cms\Filemanager;
 
 /**
  * Site management request receive class.
@@ -21,7 +21,7 @@ class Receive extends Response
     public function setDirectory()
     {
         $this->setCurrentDirectory($this->request->param('path'));
-        \P5\Http::redirect($this->app->systemURI().'?mode=cms.file-manager.response');
+        \P5\Http::redirect($this->app->systemURI().'?mode=cms.filemanager.response');
     }
 
     /**
@@ -32,7 +32,7 @@ class Receive extends Response
         $message = 'SUCCESS_SAVED';
         $status = ['status' => 0];
         $options = [];
-        $response = [[$this, 'redirect'], 'cms.file-manager.response'];
+        $response = [[$this, 'redirect'], 'cms.filemanager.response'];
 
         if (false === $result = parent::rename()) {
             $message = 'FAILED_REMOVE';
@@ -55,7 +55,7 @@ class Receive extends Response
         $message = 'SUCCESS_SAVED';
         $status = 0;
         $options = [];
-        $response = [[$this, 'redirect'], 'cms.file-manager.response'];
+        $response = [[$this, 'redirect'], 'cms.filemanager.response'];
 
         if (parent::move()) {
             $this->setCurrentDirectory($this->request->param('dest'));
@@ -78,7 +78,7 @@ class Receive extends Response
         $message = 'SUCCESS_REMOVED';
         $status = 0;
         $options = [];
-        $response = [[$this, 'redirect'], 'cms.file-manager.response'];
+        $response = [[$this, 'redirect'], 'cms.filemanager.response'];
 
         if (!parent::remove()) {
             $message = 'FAILED_REMOVE';
@@ -96,7 +96,7 @@ class Receive extends Response
         $message = 'SUCCESS_SAVED';
         $status = 0;
         $options = [];
-        $response = [[$this, 'redirect'], 'cms.file-manager.response'];
+        $response = [[$this, 'redirect'], 'cms.filemanager.response'];
 
         try {
             $valid = [
@@ -128,7 +128,7 @@ class Receive extends Response
         $message = 'SUCCESS_SAVED';
         $status = 0;
         $options = [];
-        $response = [[$this, 'redirect'], 'cms.file-manager.response'];
+        $response = [[$this, 'redirect'], 'cms.filemanager.response'];
 
         try {
             $valid = [

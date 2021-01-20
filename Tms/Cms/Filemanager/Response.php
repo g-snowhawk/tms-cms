@@ -8,7 +8,7 @@
  * https://www.plus-5.com/licenses/mit-license
  */
 
-namespace Tms\Cms\FileManager;
+namespace Tms\Cms\Filemanager;
 
 /**
  * Entry management request response class.
@@ -16,7 +16,7 @@ namespace Tms\Cms\FileManager;
  * @license https://www.plus-5.com/licenses/mit-license  MIT License
  * @author  Taka Goto <www.plus-5.com>
  */
-class Response extends \Tms\Cms\FileManager
+class Response extends \Tms\Cms\Filemanager
 {
     /**
      * Object Constructor.

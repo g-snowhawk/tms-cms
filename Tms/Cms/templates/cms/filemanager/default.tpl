@@ -5,9 +5,9 @@
 {% endblock %}
 
 {% block main %}
-  <input type="hidden" name="mode" value="cms.file-manager.receive:remove">
-  <input type="hidden" name="ondrop_mode" value="cms.file-manager.receive:move">
-  <input type="hidden" name="rename_mode" value="cms.file-manager.receive:rename">
+  <input type="hidden" name="mode" value="cms.filemanager.receive:remove">
+  <input type="hidden" name="ondrop_mode" value="cms.filemanager.receive:move">
+  <input type="hidden" name="rename_mode" value="cms.filemanager.receive:rename">
   <div class="explorer">
     <div class="explorer-sidebar resizable" data-minwidth="120">
       <div class="tree">
@@ -15,7 +15,7 @@
         <nav>
           <ul>
             {% if apps.isAdmin() or site.noroot != '1' %}
-              <li><a href="?mode=cms.file-manager.receive:set-directory&amp;path=" class="drop-target{% if session.current_dir is empty %} current{% endif %}" data-drop-path="">・Site Root</a>
+              <li><a href="?mode=cms.filemanager.receive:set-directory&amp;path=" class="drop-target{% if session.current_dir is empty %} current{% endif %}" data-drop-path="">・Site Root</a>
             {% endif %}
             {% import "cms/filemanager/tree.tpl" as tree %}
             {{ tree.recursion(null, null) }}
@@ -34,7 +34,7 @@
             {% if loop.first %}
               <span class="breadcrumbs">
             {% endif %}
-            <a href="?mode=cms.file-manager.receive:set-directory&amp;path={{ path|url_encode }}">{{ dir }}</a>
+            <a href="?mode=cms.filemanager.receive:set-directory&amp;path={{ path|url_encode }}">{{ dir }}</a>
             {% if loop.last %}
               </span>
             {% endif %}
@@ -54,7 +54,7 @@
             {% for unit in files %}
               <tr class="{{ unit.kind }}">
                 {% if unit.kind == 'folder' %}
-                  <td class="link spacer with-icon"><a href="?mode=cms.file-manager.receive:set-directory&amp;path={{ unit.path|url_encode }}" class="renamable">{{ unit.name }}</a></td>
+                  <td class="link spacer with-icon"><a href="?mode=cms.filemanager.receive:set-directory&amp;path={{ unit.path|url_encode }}" class="renamable">{{ unit.name }}</a></td>
                 {% else %}
                   <td class="link spacer with-icon"><span class="renamable">{{ unit.name }}</span></td>
                 {% endif %}
@@ -73,8 +73,8 @@
         </div>
         <div class="footer-controls">
           <nav class="links">
-            <a href="?mode=cms.file-manager.response:add-folder" class="subform-opener"><i class="mark">+</i>新規フォルダ</a>
-            <a href="?mode=cms.file-manager.response:add-file" class="subform-opener"><i class="mark">+</i>新規ファイル</a>
+            <a href="?mode=cms.filemanager.response:add-folder" class="subform-opener"><i class="mark">+</i>新規フォルダ</a>
+            <a href="?mode=cms.filemanager.response:add-file" class="subform-opener"><i class="mark">+</i>新規ファイル</a>
           </nav>
           <nav class="pagination">
             {% include 'pagination.tpl' %}

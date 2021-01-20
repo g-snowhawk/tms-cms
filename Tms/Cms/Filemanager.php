@@ -18,7 +18,7 @@ use ErrorException;
  * @license https://www.plus-5.com/licenses/mit-license  MIT License
  * @author  Taka Goto <www.plus-5.com>
  */
-class FileManager extends Site
+class Filemanager extends Site
 {
     /*
      * Using common accessor methods

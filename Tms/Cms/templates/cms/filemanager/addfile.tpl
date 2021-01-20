@@ -24,7 +24,7 @@
     </div>
     <div class="form-footer">
       <input type="submit" name="s1_submit" value="アップロード">
-      <input type="hidden" name="mode" value="cms.file-manager.receive:save-file">
+      <input type="hidden" name="mode" value="cms.filemanager.receive:save-file">
     </div>
   </article>
 {% endblock %}
