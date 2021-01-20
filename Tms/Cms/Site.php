@@ -137,6 +137,7 @@ class Site extends \Tms\Cms
 
         $this->db->begin();
 
+        $escape_data = $this->site_data;
         if (empty($post['id'])) {
             if (!isset($save['userkey'])) {
                 $save['userkey'] = $this->uid;
@@ -144,15 +145,15 @@ class Site extends \Tms\Cms
             $raw = ['create_date' => 'CURRENT_TIMESTAMP'];
             if (false !== $result = $this->db->insert($table, $save, $raw)) {
                 $post['id'] = $this->db->lastInsertId(null, 'id');
-                $escape_data = $this->site_data;
                 $this->site_data = $this->loadSiteData($post['id']);
                 if (false === $this->createRootCategory($post['id'])) {
                     $result = false;
                 }
-                $this->site_data = $escape_data;
             }
         } else {
-            $result = $this->db->update($table, $save, 'id = ?', [$post['id']], $raw);
+            if (false !== $result = $this->db->update($table, $save, 'id = ?', [$post['id']], $raw)) {
+                $this->site_data = $this->loadSiteData($post['id']);
+            }
         }
         if ($result !== false) {
             $modified = ($result > 0) ? $this->db->modified($table, 'id = ?', [$post['id']]) : true;
@@ -161,7 +162,7 @@ class Site extends \Tms\Cms
                 $plugin_results = $this->app->execPlugin('afterSaveCmsSite', $this->site_data);
                 foreach ((array)$plugin_results as $plugin_result) {
                     if ($plugin_result === false || is_null($plugin_result)) {
-                        return false;
+                        $reault = false;
                     } elseif (is_int($plugin_result)) {
                         $result += $plugin_result;
                     }
@@ -173,14 +174,18 @@ class Site extends \Tms\Cms
             if ($result === 0) {
                 $this->app->err['vl_nochange'] = 1;
             } elseif ($result !== false) {
-                return $this->db->commit();
+                $result = $this->db->commit();
             }
         } else {
             trigger_error($this->db->error());
         }
-        $this->db->rollback();
+        $this->site_data = $escape_data;
 
-        return false;
+        if ($result === false) {
+            $this->db->rollback();
+        }
+
+        return $result;
     }
 
     /**
@@ -403,13 +408,20 @@ class Site extends \Tms\Cms
                     return false;
                 }
             } else {
-                $save['id'] = $unit->id;
-                $raw = [
-                    'modify_date' => 'CURRENT_TIMESTAMP',
+                $raw = ['modify_date' => 'CURRENT_TIMESTAMP'];
+                $where = 'sitekey = ? AND path = ? AND revision = ? AND id = identifier';
+                $replaces = [$sitekey, $unit->path, 0];
+                $update = [
+                    'title' => $save['title'],
+                    'sourcecode' => $save['sourcecode'],
+                    'active' => $save['active'],
+                    'kind' => $save['kind'],
                 ];
-                if (false === $this->db->update('template', $save, 'id = ?', [$unit->id], $raw)) {
+                if (false === $this->db->update('template', $update, $where, $replaces, $raw)) {
+                    trigger_error($this->db->error());
                     return false;
                 }
+                $save['id'] = $this->db->get('id', 'template', $where, $replaces);
             }
 
             // build template file

@@ -10,6 +10,8 @@
 
 namespace Tms\Cms\Template;
 
+use P5\Lang;
+
 /**
  * Template management request receive class.
  *
@@ -112,6 +114,7 @@ class Receive extends Response
             $json = ['status' => 1, 'message' => 'System Error'];
             trigger_error($this->db->error());
         } else {
+            $json['message'] = Lang::translate('SUCCESS_IMPORT');
             $this->db->commit();
         }
 

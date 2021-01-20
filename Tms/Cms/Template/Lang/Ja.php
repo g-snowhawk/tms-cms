@@ -27,4 +27,6 @@ class Ja extends \P5\Lang
         '5' => '共通',
         '6' => 'スタイルシート',
     ];
+
+    const SUCCESS_IMPORT = 'テンプレートのインポートが完了しました';
 }

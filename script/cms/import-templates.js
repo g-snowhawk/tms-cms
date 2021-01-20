@@ -34,9 +34,27 @@ function tmsImportTemplateRun(event) {
         body: formData
     })
     .then((response) => {
-        console.log(response);
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            throw new Error("Unexpected response");
+        } else {
+            throw new Error("Server Error");
+        }
+    })
+    .then((json) => {
+        if (json.status !== 0) {
+            throw new Error(json.message);
+        }
+        // some functions
+        alert(json.message);
+        form.reset();
+        location.reload();
     })
     .catch((error) => {
+        alert(error.message);
         console.error(error);
     });
 }
