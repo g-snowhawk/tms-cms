@@ -372,8 +372,9 @@ class Entry extends Category
                 if (move_uploaded_file($_FILES['file']['tmp_name'][$key], $upload_path)) {
 
                     // Create PDF thumbnail
-                    if (strtolower($save_data['mime']) === 'application/pdf' && (!empty($save_data['option1']) || $save_data['option1'] === '0')) {
-                        self::createPDFThumbnail($this->command_convert, $upload_path, $save_data['option1']);
+                    $option1 = $save_data['option1'] ?? null;
+                    if (strtolower($save_data['mime']) === 'application/pdf' && (!empty($option1) || $option1 === '0')) {
+                        self::createPDFThumbnail($this->command_convert, $upload_path, $option1);
                     }
 
                     $count += $diff;
