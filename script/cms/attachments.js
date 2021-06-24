@@ -53,6 +53,10 @@ TM_Attachments.prototype.setListener = function(element) {
     element.addEventListener('dragover',  this.onDragEnter, false);
     element.addEventListener('drop',      this.onDrop, false);
 
+    var popup = element.querySelector('.popup');
+    if (!popup) {
+        return;
+    }
     element.addEventListener('contextmenu', this.onContextMenu, false);
 };
 
