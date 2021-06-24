@@ -1,109 +1,141 @@
 /**
- * This file is part of Tak-Me Contents Management System.
+ * Javascript Library for Tak-Me CMS
  *
  * This software is released under the MIT License.
  * https://www.plus-5.com/licenses/mit-license
  *
- * @author    PlusFive.
- * @copyright (c)2019 PlusFive. (http://www.plus-5.com/)
+ * @copyright 2020 PlusFive (https://www.plus-5.com)
+ * @version 1.0.0
  */
-const buttonSubmit = document.querySelector('input[name=s1_submit]');
-const progressScreenId = 'progress1';
-
-let pollingTimer = 0;
-let pollingDelay = 1000;
-let pollingInterval = 10000;
+let cmsReassemblyNumber = 0;
+let cmsFormAction;
+let cmdReassemblingProgress;
 
 switch (document.readyState) {
     case 'loading' :
-        window.addEventListener('DOMContentLoaded', initializeReassembly)
+        window.addEventListener('DOMContentLoaded', cmsReassemblyInit)
         break;
     case 'interactive':
     case 'complete':
-        initializeReassembly();
+        cmsReassemblyInit();
         break;
 }
 
-function initializeReassembly(event) {
-    if (buttonSubmit) {
-        buttonSubmit.addEventListener('click', assembly);
+function cmsReassemblyInit(event) {
+    const trigger = document.querySelector('[name=s1_submit]');
+    if (trigger) {
+        trigger.addEventListener('click', cmsReassemblyGetEntries);
+        trigger.form.addEventListener('submit', cmsReassemblyUnsubmitForm);
     }
+
+    cmdReassemblingProgress = document.getElementById('progress-rebuilding');
 }
 
-function assembly(event) {
+function cmsReassemblyUnsubmitForm(event) {
     event.preventDefault();
-    const element = event.currentTarget;
-    const form = element.form;
+}
 
-    if (element.dataset.confirm && !confirm(element.dataset.confirm)) {
-        console.warn('The operation was canceled by user.');
-        return;
-    }
+function cmsReassemblyGetEntries(event) {
+    const trigger = event.target;
+    const form = trigger.form;
+    const formData = new FormData(form);
+    cmsFormAction = form.action;
 
-    setProgressScreen();
-
-    if (typeof(fetch) !== 'function') {
-        return form.submit();
-    }
-
-    data = new FormData(form);
-    data.append('returntype', 'json');
-
-    fetch(form.action, {
+    fetch(cmsFormAction, {
         method: 'POST',
         credentials: 'same-origin',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: data
-    }).then(response => response.json())
-        .then(json => received(json))
-        .catch(function(error){
-            setProgressScreen(1);
-            console.error(error)
-        });
-}
-
-function received(json) {
-    if (json.status === 0) {
-        pollingTimer = setTimeout(
-            polling,
-            pollingInterval,
-            json.arguments.polling_address + "&polling_id=" + json.arguments.polling_id
-        );
-    } else {
-        setProgressScreen(1);
-        alert(json.message);
-    }
-}
-
-function polling(url) {
-    fetch(url, {
-        method: 'GET',
-        credentials: 'same-origin',
-    }).then(response => response.json())
-        .then(function(json){
-            clearTimeout(pollingTimer);
-            if (json.status === 'running') {
-                pollingTimer = setTimeout(polling, pollingInterval, url);
-            } else if (json.status === 'ended') {
-                setProgressScreen(1);
-                alert(json.response.message);
+        body: formData
+    }).then((response) => {
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
             }
-        })
-        .catch(function(error){
-            setProgressScreen(1);
+            throw new Error("Unexpected response");
+        } else {
+            throw new Error("Server Error");
+        }
+    }).then(response => {
+        if (response.status !== 0) {
+            const message = (response.description)
+                ? response.description : response.message;
+            throw new CmsReassemblyError(message);
+        }
+        if (confirm(trigger.dataset.confirm)) {
+            trigger.classList.add('hidden');
+            cmdReassemblingProgress.classList.remove('hidden');
+            cmdReassemblingProgress.min = 0;
+            cmdReassemblingProgress.max = response.entries.length;
+            cmdReassemblingProgress.value = 0;
+            formData.set('mode', 'cms.entry.receive:reassemble');
+            cmsReassemblyStart(response.entries, formData, 0, trigger);
+        }
+    }).catch((error) => {
+        if (error.name === 'AbortError') {
+            console.warn('Aborted!');
+        } else {
             console.error(error)
-        });
+            const message = (error.name === "CmsReassemblyError") ? error : 'System Error!';
+            alert(message);
+        }
+    })
+    .then(() => {
+        // Finaly
+    });
 }
 
-function setProgressScreen(clear) {
-    if (clear) {
-        const div = document.getElementById(progressScreenId);
-        if (div) div.parentNode.removeChild(div);
-    } else {
-        const div = document.body.appendChild(document.createElement('div'));
-        div.id = progressScreenId;
-        div.appendChild(document.createElement('div'));
+function cmsReassemblyStart(entries, formData, n, trigger) {
+    if (entries[n] === undefined) {
+        trigger.classList.remove('hidden');
+        cmdReassemblingProgress.classList.add('hidden');
+        alert(trigger.dataset.completion);
+        return;
     }
+    formData.set('id', entries[n].id);
+    //formData.set('version', entries[n].version);
+    formData.set('type', entries[n].type);
+
+    fetch(cmsFormAction, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData
+    }).then((response) => {
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            throw new Error("Unexpected response");
+        } else {
+            throw new Error("Server Error");
+        }
+    }).then(response => {
+        if (response.status !== 0) {
+            const message = (response.description)
+                ? response.description : response.message;
+            throw new CmsReassemblyError(message);
+        }
+        cmdReassemblingProgress.value = ++n;
+        setTimeout(cmsReassemblyStart, 100, entries, formData, n, trigger);
+    }).catch((error) => {
+        trigger.classList.remove('hidden');
+        cmdReassemblingProgress.classList.add('hidden');
+        if (error.name === 'AbortError') {
+            console.warn('Aborted!');
+        } else {
+            console.error(error)
+            const message = (error.name === "CmsReassemblyError") ? error : 'System Error!';
+            alert(message);
+        }
+    })
+    .then(() => {
+        // Finaly
+    });
+}
+
+class CmsReassemblyError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CmsReassemblyError";
+  }
 }

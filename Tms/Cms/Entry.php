@@ -10,6 +10,11 @@
 
 namespace Tms\Cms;
 
+use ErrorException;
+use Exception;
+use P5\File;
+use P5\Text;
+
 /**
  * Entry management class.
  *
@@ -57,6 +62,7 @@ class Entry extends Category
         ];
 
         $post = $this->request->POST();
+        $release_date = $post['release_date'] ?? null;
 
         $valid = [];
         $valid[] = ['vl_title', 'title', 'empty'];
@@ -67,7 +73,7 @@ class Entry extends Category
         $valid[] = ['vl_description', 'description', 'disallowtags', 2];
         $valid[] = ['vl_release_period', 'release_date', 'datetime_format', 1, 'allowempty'];
         $valid[] = ['vl_release_period', 'close_date', 'datetime_format', 2, 'allowempty'];
-        $valid[] = ['vl_release_period', 'close_date', 'gt_datetime', 3, $post['release_date'], 'allowempty'];
+        $valid[] = ['vl_release_period', 'close_date', 'gt_datetime', 3, $release_date, 'allowempty'];
         $valid[] = ['vl_author_date', 'author_date', 'datetime_format', 1, 'allowempty'];
 
         if (!$this->validate($valid)) {
@@ -86,7 +92,7 @@ class Entry extends Category
             }
             if (isset($post[$field])) {
                 if (!empty($post[$field] && in_array($field, $this->date_columns))) {
-                    $save[$field] = date('Y-m-d H:i', \P5\Text::strtotime($post[$field]));
+                    $save[$field] = date('Y-m-d H:i', Text::strtotime($post[$field]));
                     continue;
                 }
 
@@ -313,7 +319,7 @@ class Entry extends Category
 
                 // Convert encoding multibyte characters
                 if (mb_strlen($name) !== mb_strwidth($name)) {
-                    $name = \P5\Text::convert($name);
+                    $name = Text::convert($name);
                 }
 
                 $file_name = urldecode(pathinfo(basename(urlencode($name)), PATHINFO_FILENAME));
@@ -324,7 +330,7 @@ class Entry extends Category
                     $file_name = md5($file_name);
                 }
 
-                $upload_path = \P5\File::realpath("$upload_dir/$file_name.$file_extension");
+                $upload_path = File::realpath("$upload_dir/$file_name.$file_extension");
 
                 $save_data['sitekey'] = $this->siteID;
                 $save_data['relkey'] = (empty($sectionkey)) ? $entrykey : $sectionkey;
@@ -403,7 +409,7 @@ class Entry extends Category
             trigger_error('Unexpected error', E_USER_ERROR);
         }
         $upload_dir = $this->fileUploadDir($entrykey, $sectionkey);
-        return \P5\File::rmdir($upload_dir, true);
+        return File::rmdir($upload_dir, true);
     }
 
     /**
@@ -494,7 +500,7 @@ class Entry extends Category
                     // TODO: which use empty or is_null
                     $save[$x_date] = (empty($post[$x_date]))
                         ? NULL 
-                        : date('Y-m-d H:i', \P5\Text::strtotime($post[$x_date]));
+                        : date('Y-m-d H:i', Text::strtotime($post[$x_date]));
                 }
             }
             $this->db->update(self::ENTRY_TABLE, $save, 'identifier = ? ORDER BY revision DESC LIMIT 1', [$entrykey]);
@@ -544,7 +550,7 @@ class Entry extends Category
                 $source = $this->build($new_entrykey);
                 if (!empty($source)) {
                     // Check release path
-                    if (!file_exists($release_dir) && !\P5\File::mkdir($release_dir)) {
+                    if (!file_exists($release_dir) && !File::mkdir($release_dir)) {
                         return false;
                     }
                     file_put_contents($release_path, $source);
@@ -554,7 +560,7 @@ class Entry extends Category
                     $this->app->logger->log("Remove entry file `$release_path'", 101);
                 }
                 $this->buildArchives($new_entrykey);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 trigger_error($e->getMessage());
 
                 return false;
@@ -642,7 +648,7 @@ class Entry extends Category
             $save = ['active' => '1'];
             foreach ($this->date_columns as $x_date) {
                 if (isset($post[$x_date])) {
-                    $save[$x_date] = date('Y-m-d H:i', \P5\Text::strtotime($post[$x_date]));
+                    $save[$x_date] = date('Y-m-d H:i', Text::strtotime($post[$x_date]));
                 }
             }
             $this->db->update(self::SECTION_TABLE, $save, 'identifier = ? ORDER BY revision DESC LIMIT 1', [$sectionkey]);
@@ -666,7 +672,7 @@ class Entry extends Category
         foreach ((array) $fields as $field) {
             unset($field['id']);
             if (strpos($field['name'], 'file.') === 0) {
-                $field['data'] = \P5\File::realpath("$dest/".basename($field['data']));
+                $field['data'] = File::realpath("$dest/".basename($field['data']));
             }
             $field['relkey'] = $relkey;
             if (false === $this->db->insert('custom', $field)) {
@@ -766,7 +772,7 @@ class Entry extends Category
 
                 $commit = $this->db->commit();
 
-                $plugin_result = $this->app->execPlugin('completeRemove', $post);
+                $plugin_result = $this->app->execPlugin('completeRemove', $this->request->param());
                 foreach($plugin_result as $result) {
                     if (false === $result) {
                         return false;
@@ -938,7 +944,7 @@ class Entry extends Category
 
         // Check release path
         $dir = dirname($release_path);
-        if (!file_exists($dir) && !\P5\File::mkdir($dir)) {
+        if (!file_exists($dir) && !File::mkdir($dir)) {
             return false;
         }
 
@@ -1074,7 +1080,7 @@ class Entry extends Category
         foreach ($thumbnails as $thumbnail) {
             try {
                 unlink($thumbnail);
-            } catch (\ErrorException $e) {
+            } catch (ErrorException $e) {
                 $result = false;
             }
         }
@@ -1170,11 +1176,11 @@ class Entry extends Category
         }
         $dest = "$upload_dir/$somekey";
         if (is_dir($dest)) {
-            \P5\File::rmdir($dest, true);
+            File::rmdir($dest, true);
         }
 
         if ($table === self::SECTION_TABLE) {
-            return \P5\File::copy($src, $dest, true, $copytype);
+            return File::copy($src, $dest, true, $copytype);
         }
 
         mkdir($dest, 0777, true);
@@ -1182,7 +1188,7 @@ class Entry extends Category
         foreach ($files as $file) {
             $path = "$src/$file";
             if (is_file($path)) {
-                if (false === \P5\File::copy($path, "$dest/$file", false, $copytype)) {
+                if (false === File::copy($path, "$dest/$file", false, $copytype)) {
                     return false;
                 }
             }

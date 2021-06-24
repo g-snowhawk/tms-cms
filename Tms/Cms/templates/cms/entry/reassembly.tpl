@@ -1,10 +1,7 @@
 {% extends "master.tpl" %}
 
 {% block main %}
-  <input type="hidden" name="mode" value="cms.entry.receive:reassembly">
-  {% if runAsyncBy is defined %}
-    <input type="hidden" name="polling_id" value="{{ runAsyncBy }}">
-  {% endif %}
+  <input type="hidden" name="mode" value="cms.entry.receive:get-reassemble-list">
   <div class="wrapper">
     <h1>再構築</h1>
     <p>本処理は、公開されているドキュメント全てを再作成します。<br>
@@ -13,6 +10,7 @@
        Webサイトへのアクセスが少ない時間帯に実行することを推奨します。</p>
     <div class="form-footer">
       <input type="submit" name="s1_submit" value="再構築を実行"{% if confirmReassembly is defined %} data-confirm="{{ confirmReassembly }}"{% endif %}>
+      <progress class="hidden" id="progress-rebuilding"></progress>
     </div>
   </div>
 {% endblock %}

@@ -147,7 +147,7 @@
           <input type="submit" name="preview" value="プレビュー">
         </span>
         <span>
-          <a href="?mode=cms.entry.response">キャンセル</a>
+          <a href="?mode=cms.entry.response" class="button">キャンセル</a>
           <input type="submit" name="s1_submit" value="保存">
         </span>
       </div>

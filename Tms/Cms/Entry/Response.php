@@ -253,26 +253,29 @@ class Response extends \Tms\Cms\Entry
     public function reassembly()
     {
         // Can uses async
-        $enable_async = false;
-        $disable_functions = array_map('trim', explode(',', ini_get('disable_functions')));
-        if (!in_array('exec', $disable_functions)) {
-            $enable_cli = exec(
-                $this->nohup() . ' ' . $this->phpCLI() . ' --version',
-                $response, $status
-            );
+        //$enable_async = false;
+        //$disable_functions = array_map('trim', explode(',', ini_get('disable_functions')));
+        //if (!in_array('exec', $disable_functions)) {
+        //    $enable_cli = exec(
+        //        $this->nohup() . ' ' . $this->phpCLI() . ' --version',
+        //        $response, $status
+        //    );
 
-            if ($status === 0) {
-                $this->view->bind('runAsyncBy', uniqid('pol'));
-                $this->view->bind('confirmReassembly', Lang::translate('CONFIRM_REASSEMBLY'));
-                $enable_async = true;
-            }
-        }
+        //    if ($status === 0) {
+        //        $this->view->bind('runAsyncBy', uniqid('pol'));
+        //        $this->view->bind('confirmReassembly', Lang::translate('CONFIRM_REASSEMBLY'));
+        //        $enable_async = true;
+        //    }
+        //}
 
-        if (false === $enable_async) {
-            $form = $this->view->param('form');
-            $form['confirm'] = Lang::translate('CONFIRM_REASSEMBLY');
-            $this->view->bind('form', $form);
-        }
+        //if (false === $enable_async) {
+        //    $form = $this->view->param('form');
+        //    $form['confirm'] = Lang::translate('CONFIRM_REASSEMBLY');
+        //    $this->view->bind('form', $form);
+        //}
+
+        $this->view->bind('confirmReassembly', Lang::translate('CONFIRM_REASSEMBLY'));
+        $this->view->bind('runAsyncBy', uniqid('pol'));
 
         $this->view->render('cms/entry/reassembly.tpl');
     }

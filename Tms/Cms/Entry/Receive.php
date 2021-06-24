@@ -10,6 +10,7 @@
 
 namespace Tms\Cms\Entry;
 
+use ErrorException;
 use Tms\Cms\Category;
 use P5\Environment;
 use P5\Http;
@@ -151,6 +152,27 @@ class Receive extends Response
         $this->postReceived(Lang::translate($message), $status, $callback, $args); 
     }
 
+    public function reassemble()
+    {
+        $key = $this->request->param('id');
+        $type = $this->request->param('type');
+        $json = ['status' => 1];
+        if ($type === 'entry') {
+            if (false !== $this->createEntryFile($key)) {
+                $json = ['status' => 0];
+            }
+        } elseif ($type === 'category') {
+            if (false !== Category::reassembly($key, true)) {
+                $json = ['status' => 0];
+            }
+        }
+
+        Http::nocache();
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($json);
+        exit;
+    }
+
     /**
      * Reassemble the site.
      */
@@ -259,7 +281,7 @@ class Receive extends Response
                         unlink($path);
                     }
                     $this->db->commit();
-                } catch (\ErrorException $e) {
+                } catch (ErrorException $e) {
                     $response['message'] = 'System Error';
                     trigger_error($e->getMessage());
                 }
@@ -382,5 +404,51 @@ class Receive extends Response
         Http::redirect(
             $this->app->systemURI().'?mode=cms.entry.response:trash'
         );
+    }
+
+    public function getReassembleList()
+    {
+        $json = ['status' => 1];
+
+        $entries = $this->db->select(
+            'id',
+            'entry',
+            'WHERE sitekey = ? AND active = ? AND trash <> ?',
+            [$this->siteID, '1', '1']
+        );
+
+        if (false !== $entries) {
+            $categories = $this->db->select(
+                'id',
+                'category',
+                "WHERE sitekey = ? AND (template <> '' OR template IS NOT NULL) AND trash <> ?",
+                [$this->siteID, '1']
+            );
+            if (false !== $categories) {
+                $json = [
+                    'status' => 0,
+                    'entries' => [],
+                ];
+                foreach ($entries as $entry) {
+                    $json['entries'][] = [
+                        'id' => $entry['id'],
+                        'type' => 'entry',
+                    ];
+                }
+                foreach ($categories as $category) {
+                    $json['entries'][] = [
+                        'id' => $category['id'],
+                        'type' => 'category',
+                    ];
+                }
+            }
+        } else {
+            $json['message'] = $this->db->error();
+        }
+
+        Http::nocache();
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($json);
+        exit;
     }
 }

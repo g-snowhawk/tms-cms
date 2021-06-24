@@ -10,6 +10,14 @@
 
 namespace Tms\Cms;
 
+use ErrorException;
+use P5\Environment;
+use P5\File;
+use P5\Http;
+use P5\Lang;
+use P5\Pagination;
+use P5\Text;
+
 /**
  * Category management class.
  *
@@ -68,7 +76,7 @@ class Category extends Template
     /**
      * Pagination object
      *
-     * @var \P5\Pagination
+     * @var P5\Pagination
      */
     public $pager;
 
@@ -125,7 +133,7 @@ class Category extends Template
             }
             if (isset($post[$field])) {
                 if ($field === 'author_date' && !empty($post[$field])) {
-                    $save[$field] = date('Y-m-d H:i', \P5\Text::strtotime($post[$field]));
+                    $save[$field] = date('Y-m-d H:i', Text::strtotime($post[$field]));
                     continue;
                 }
                 $save[$field] = (empty($post[$field])) ? null : $post[$field];
@@ -224,7 +232,7 @@ class Category extends Template
         $this->db->begin();
 
         if (false === $this->isEmpty($id)) {
-            $this->session->param('messages', \P5\Lang::translate('NOT_EMPTY'));
+            $this->session->param('messages', Lang::translate('NOT_EMPTY'));
 
             return false;
         }
@@ -234,7 +242,7 @@ class Category extends Template
         $parent = $this->parentCategory($id, 'id, title');
 
         if (false !== $this->db->delete('category', "id = ? AND sitekey = ? AND reserved = '0'", [$id, $this->siteID])) {
-            if (!file_exists($path) || \P5\File::rmdirs($path, true)) {
+            if (!file_exists($path) || File::rmdirs($path, true)) {
                 if ($this->siteProperty('type') === 'static') {
                     self::reassembly($parent);
                 }
@@ -283,7 +291,7 @@ class Category extends Template
      */
     public function categories($category, $columns = '*')
     {
-        $tmp = \P5\Text::explode(',', $columns);
+        $tmp = Text::explode(',', $columns);
         $cols = [];
         foreach ($tmp as $col) {
             $quot = ($col === '*') ? '' : '`';
@@ -312,12 +320,12 @@ class Category extends Template
         $path = array_column($paths, 'path');
 
         if ($type === 2) {
-            return \P5\File::realpath('/'.implode('/', $path));
+            return File::realpath('/'.implode('/', $path));
         }
 
         $file_name = ($type === 1) ? '' : '/'.$this->site_data['defaultpage'];
 
-        return \P5\File::realpath($this->site_data['openpath'].'/'.implode('/', $path).$file_name);
+        return File::realpath($this->site_data['openpath'].'/'.implode('/', $path).$file_name);
     }
 
     /**
@@ -340,10 +348,10 @@ class Category extends Template
         }
         elseif ($type === 3) {
             $static = $this->site_data['url'];
-            return \P5\Http::realuri($static.$category_path.'/'.$unit['filepath']);
+            return Http::realuri($static.$category_path.'/'.$unit['filepath']);
         }
 
-        return \P5\File::realpath($static.$category_path.'/'.$unit['filepath']);
+        return File::realpath($static.$category_path.'/'.$unit['filepath']);
     }
 
     /**
@@ -387,7 +395,7 @@ class Category extends Template
      */
     public function parentCategory($id, $col = '*')
     {
-        $tmp = \P5\Text::explode(',', $col);
+        $tmp = Text::explode(',', $col);
         $columns = [];
         foreach ($tmp as $column) {
             $columns[] = 'parent.'.$column;
@@ -411,7 +419,7 @@ class Category extends Template
      */
     public function childCategories($id, $col = '*', $depth = 0)
     {
-        $tmp = \P5\Text::explode(',', $col);
+        $tmp = Text::explode(',', $col);
         $columns = [];
         foreach ($tmp as $column) {
             $columns[] = 'children.'.$column;
@@ -432,7 +440,12 @@ class Category extends Template
         $children = $this->categoryListSQL();
 
         $sort = ' ORDER BY children.priority';
-        $list = (array)$this->db->nsmGetChildren($columns, $parent, $midparent, $children, "AND children.id IS NOT NULL$sort", ['site_id' => $this->siteID, 'category_id' => $id]);
+        $list = $this->db->nsmGetChildren($columns, $parent, $midparent, $children, "AND children.id IS NOT NULL$sort", ['site_id' => $this->siteID, 'category_id' => $id]);
+
+        if (false === $list) {
+            trigger_error($this->db->error());
+            return false;
+        }
 
         foreach ($list as &$unit) {
             if (!empty($unit['template'])) {
@@ -469,7 +482,7 @@ class Category extends Template
      */
     public static function rootCategory(\Tms\Db $db, $columns = 'children.id')
     {
-        $siteID = \P5\Environment::session('current_site');
+        $siteID = Environment::session('current_site');
         if (empty($siteID)) {
             return;
         }
@@ -516,7 +529,7 @@ class Category extends Template
         $this->session->param('current_build_category', $category['id']);
 
         $apps = new Response($this->app);
-        $apps->pager = new \P5\Pagination();
+        $apps->pager = new Pagination();
         $suffix_separator = '.';
         $apps->pager->setSuffix($suffix_separator);
         $apps->pager->setLinkFormat(sprintf('%s%s%%s.%s', $file_name, $suffix_separator, $file_extension));
@@ -589,7 +602,7 @@ class Category extends Template
             $original_release_dir = $release_dir;
             $release_dir = dirname($release_dir);
             $url = $this->getCategoryPath($category['id'], 2);
-            $dir = \P5\File::realpath($this->site_data['openpath'].'/'.$url);
+            $dir = File::realpath($this->site_data['openpath'].'/'.$url);
 
             if (!empty($category['archive_format'])) {
                 $format = preg_replace('/%[a-z]/i', '*', $category['archive_format']);
@@ -656,7 +669,7 @@ class Category extends Template
 
                     try {
                         file_put_contents($path, $source);
-                    } catch (\ErrorException $e) {
+                    } catch (ErrorException $e) {
                         trigger_error($e->getMessage());
                         return false;
                     }
@@ -694,7 +707,7 @@ class Category extends Template
 
         if ($this->page_separation) {
             if (is_null($this->pager)) {
-                $this->pager = new \P5\Pagination();
+                $this->pager = new Pagination();
             }
             if (!$this->pager->isInited()) {
                 $this->pager->init($total, $row);
@@ -715,7 +728,7 @@ class Category extends Template
         $list = (array)$this->db->select('*', 'entry', $statement, $options);
 
         foreach ($list as &$unit) {
-            $unit['url'] = \P5\Http::realuri($this->site_data['path'].$this->getEntryPath($unit['id'], 2));
+            $unit['url'] = Http::realuri($this->site_data['path'].$this->getEntryPath($unit['id'], 2));
             $unit['html_id'] = $this->pathToID($unit['url']);
         }
         unset($unit);
@@ -762,7 +775,7 @@ class Category extends Template
             $stat .= " AND (lft >= ? AND rgt <= ?)";
             $opt[] = $range['lft'];
             $opt[] = $range['rgt'];
-            $filters = \P5\Text::explode(',', $filter);
+            $filters = Text::explode(',', $filter);
             $placeholder = implode(',', array_fill(0, count($filters), '?'));
             $stat .= " AND (id IN ($placeholder) OR path IN($placeholder) OR title IN($placeholder))";
             $opt = array_merge($opt, $filters, $filters, $filters);
@@ -831,10 +844,11 @@ class Category extends Template
         $statement .= " ORDER BY author_date $sort";
 
         $this->page_separation = (int) $pagenation !== 0;
-        $total = $this->db->count('entry', $statement, $options);
+        //$total = $this->db->count('entry', $statement, $options);
+        $total = $this->db->recordCount("SELECT * FROM table::entry WHERE {$statement}", $options);
         if ($this->page_separation) {
             if (is_null($this->pager)) {
-                $this->pager = new \P5\Pagination();
+                $this->pager = new Pagination();
             }
             if (!$this->pager->isInited()) {
                 $this->pager->init($total, $row);
@@ -856,7 +870,7 @@ class Category extends Template
 
         $list = (array)$this->db->select('*', 'entry', "WHERE $statement", $options);
         foreach ($list as &$unit) {
-            $unit['url'] = \P5\Http::realuri($this->getEntryPath($unit['id'], 2));
+            $unit['url'] = Http::realuri($this->getEntryPath($unit['id'], 2));
             $unit['html_id'] = $this->pathToID($unit['url']);
 
             // Custom fields
@@ -974,7 +988,7 @@ class Category extends Template
             return null;
         }
 
-        $upload_dir = \P5\File::realpath('/'.$this->site_data['uploaddir']);
+        $upload_dir = File::realpath('/'.$this->site_data['uploaddir']);
         $dir = $this->site_data['openpath'];
         foreach ($list as &$data) {
 
@@ -1067,7 +1081,7 @@ class Category extends Template
         $options = [$this->siteID];
 
         if (!empty($filter)) {
-            $filters = \P5\Text::explode(',', $filter);
+            $filters = Text::explode(',', $filter);
             $placeholder = implode(',', array_fill(0, count($filters), '?'));
             $where = "id IN($placeholder) OR path IN($placeholder) OR title IN($placeholder)";
         }
@@ -1089,7 +1103,9 @@ class Category extends Template
                 $list[] = $i;
                 continue;
             }
-            $data = $this->childCategories($i['id']);
+            if (false === $data = $this->childCategories($i['id'])) {
+                continue;
+            }
             foreach ($data as $n => $unit) {
                 if (!empty($unit['template'])) {
                     $unit['url'] = $this->getCategoryPath($unit['id'], 2).'/';
@@ -1303,13 +1319,25 @@ class Category extends Template
         $all = false;
         try {
             $category_id = func_get_arg(0);
-        } catch (\ErrorException $e) {
+        } catch (ErrorException $e) {
             $category_id = self::rootCategory($this->db);
             $all = true;
         }
 
-        $range = $this->db->get('lft,rgt', 'category', 'id = ?', [$category_id]);
-        $categories = $this->db->select('id,template,path,archive_format', 'category', 'WHERE lft >= ? AND rgt <= ?', [$range['lft'], $range['rgt']]);
+        try {
+            $single = func_get_arg(1);
+        } catch (ErrorException $e) {
+            $single = false;
+        }
+
+        if (false === $single) {
+            $range = $this->db->get('lft,rgt', 'category', 'id = ?', [$category_id]);
+            $categories = $this->db->select('id,template,path,archive_format', 'category', 'WHERE lft >= ? AND rgt <= ?', [$range['lft'], $range['rgt']]);
+        } else {
+            $categories = [
+                $this->db->get('id,template,path,archive_format', 'category', 'id = ?', [$category_id]),
+            ];
+        }
 
         $original_file = pathinfo($this->site_data['defaultpage'], PATHINFO_FILENAME); 
         $file_extension = pathinfo($this->site_data['defaultpage'], PATHINFO_EXTENSION); 
@@ -1320,7 +1348,7 @@ class Category extends Template
             }
 
             $url = $this->getCategoryPath($category['id'], 2);
-            $dir = \P5\File::realpath($this->site_data['openpath'].'/'.$url);
+            $dir = File::realpath($this->site_data['openpath'].'/'.$url);
             $directory_exists = file_exists($dir);
 
             $arr_archives_name = [];
@@ -1363,7 +1391,7 @@ class Category extends Template
                         try {
                             mkdir($dir, 0777, true);
                             $directory_exists = true;
-                        } catch (\ErrorException $e) {
+                        } catch (ErrorException $e) {
                             trigger_error($e->getMessage());
                             return false;
                         }
@@ -1377,6 +1405,10 @@ class Category extends Template
                     ++$page;
                 } while ($this->page_separation_watcher);
             }
+        }
+
+        if (false !== $single) {
+            return true;
         }
 
         if (method_exists($this, 'createEntryFile')) {

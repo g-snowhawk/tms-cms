@@ -104,6 +104,10 @@ html.entry-edit #previewControler input:hover {
   background-color: rgba(0,0,0,0.8);
   border: 1px solid rgba(255,255,255,1);
 }
+html.entry input.hidden,
+html.entry #progress-rebuilding.hidden {
+  display: none;
+}
 
 #section-edit #body {
   -khtml-user-drag: element;

@@ -10,6 +10,9 @@
 
 namespace Tms\Cms;
 
+use P5\Environment;
+use P5\Text;
+
 /**
  * Site management class.
  *
@@ -56,7 +59,7 @@ class Response extends Section
         $statement = "sitekey = ?";
         $options = [$this->siteID];
 
-        $filters = \P5\Text::explode(',', $filter);
+        $filters = Text::explode(',', $filter);
 
         $statics = [];
         $wildcards = [];
@@ -157,7 +160,7 @@ class Response extends Section
             'REQUEST_METHOD','REQUEST_TIME','REQUEST_TIME_FLOAT','REQUEST_URI',
             'SERVER_NAME','SERVER_PROTOCOL'
         ];
-        return (in_array($key, $allows)) ? \P5\Environment::server($key) : null;
+        return (in_array($key, $allows)) ? Environment::server($key) : null;
     }
 
     public function callByPlugin(\Tms\Plugin $plugin, $function, ...$params)
