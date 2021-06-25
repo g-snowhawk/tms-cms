@@ -1254,6 +1254,7 @@ class Category extends Template
     public function breadcrumbs($id, $all = false)
     {
         $build_type = $this->session->param('build_type');
+        $defaultpage = $this->site_data['defaultpage'];
 
         if ($build_type === 'entry') {
             $entry_path = $this->getEntryPath($id);
@@ -1267,19 +1268,18 @@ class Category extends Template
         $categories = $this->categories($categorykey, 'id, path, title, template');
         foreach ($categories as $n => $category) {
             if (empty($category['template'])) {
-                $statement = 'sitekey = ? AND category = ? AND filepath LIKE ?'.$this->filterPreview();
-                $replaces = [$this->siteID, $category['id'], 'index.htm%'];
+                $statement = 'sitekey = ? AND category = ? AND filepath = ?'.$this->filterPreview();
+                $replaces = [$this->siteID, $category['id'], $defaultpage];
                 if ((bool)$all === false && !$this->db->exists('entry', $statement, $replaces)) {
                     $categories[$n] = null;
                     continue;
                 }
-            } else {
-                $category['url'] = $this->getCategoryPath($category['id'], 2).'/';
             }
+            $category['url'] = $this->getCategoryPath($category['id'], 2).'/';
             $categories[$n] = $category;
         }
 
-        if ($build_type === 'entry' && strpos($basename, 'index.htm') === 0) {
+        if ($build_type === 'entry' && strpos($basename, $defaultpage) === 0) {
             array_pop($categories);
         }
 
