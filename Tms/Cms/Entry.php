@@ -672,7 +672,8 @@ class Entry extends Category
         foreach ((array) $fields as $field) {
             unset($field['id']);
             if (strpos($field['name'], 'file.') === 0) {
-                $field['data'] = File::realpath("$dest/".basename($field['data']));
+                $basename = array_pop(explode('/', $field['data']));
+                $field['data'] = File::realpath("{$dest}/{$basename}");
             }
             $field['relkey'] = $relkey;
             if (false === $this->db->insert('custom', $field)) {
