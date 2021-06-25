@@ -84,15 +84,58 @@ function cmsReassemblyGetEntries(event) {
     });
 }
 
-function cmsReassemblyStart(entries, formData, n, trigger) {
-    if (entries[n] === undefined) {
+function cmsReassemblyPostProcess(formData, trigger) {
+    formData.set('mode', 'cms.entry.receive:cleanup-unused-data');
+    formData.delete('id');
+    formData.delete('type');
+
+    fetch(cmsFormAction, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData
+    }).then((response) => {
+        if (response.ok) {
+            let contentType = response.headers.get("content-type");
+            if (contentType.match(/^application\/json/)) {
+                return response.json();
+            }
+            throw new Error("Unexpected response");
+        } else {
+            throw new Error("Server Error");
+        }
+    }).then(response => {
+        if (response.status !== 0) {
+            const message = (response.description)
+                ? response.description : response.message;
+            throw new CmsReassemblyError(message);
+        }
+        // Post-prosessing
         trigger.classList.remove('hidden');
         cmdReassemblingProgress.classList.add('hidden');
         alert(trigger.dataset.completion);
+    }).catch((error) => {
+        trigger.classList.remove('hidden');
+        cmdReassemblingProgress.classList.add('hidden');
+        if (error.name === 'AbortError') {
+            console.warn('Aborted!');
+        } else {
+            console.error(error)
+            const message = (error.name === "CmsReassemblyError") ? error : 'System Error!';
+            alert(message);
+        }
+    })
+    .then(() => {
+        // Finaly
+    });
+}
+
+function cmsReassemblyStart(entries, formData, n, trigger) {
+    if (entries[n] === undefined) {
+        cmsReassemblyPostProcess(formData, trigger);
         return;
     }
-    formData.set('id', entries[n].id);
     //formData.set('version', entries[n].version);
+    formData.set('id', entries[n].id);
     formData.set('type', entries[n].type);
 
     fetch(cmsFormAction, {

@@ -13,6 +13,7 @@ namespace Tms\Cms\Entry;
 use ErrorException;
 use Tms\Cms\Category;
 use P5\Environment;
+use P5\File;
 use P5\Http;
 use P5\Lang;
 use P5\Text;
@@ -450,5 +451,63 @@ class Receive extends Response
         header('Content-type: application/json; charset=utf-8');
         echo json_encode($json);
         exit;
+    }
+
+    public function cleanupUnusedData()
+    {
+        $json = ['status' => 0];
+        $sitekey = $this->siteID;
+        $upload_dir = $this->fileUploadDir();
+
+        // Custom fields
+        $types = ['section','entry','category'];
+        foreach($types as $type) {
+            $sql = "DELETE dest FROM table::custom dest
+                      LEFT JOIN `table::{$type}` src ON dest.relkey = src.id
+                     WHERE dest.sitekey = ? AND dest.kind = ? AND src.id IS NULL";
+            if (false === $this->db->exec($sql, [$sitekey, $type])) {
+                trigger_error($this->db->error());
+            }
+        }
+
+        // Files
+        $openpath = $this->site_data['openpath'];
+        $up = str_replace($openpath, '', $upload_dir);
+        $fetch = $this->db->select(
+            'data', 'custom', 'WHERE sitekey = ? AND data LIKE ?',
+            [$sitekey, "{$up}/%"]
+        );
+        $paths = [];
+        foreach ($fetch as $unit) {
+            $paths[($openpath . $unit['data'])] = '';
+        }
+        unset($fetch);
+        $this->cleanFiles($upload_dir, $paths);
+
+        Http::nocache();
+        header('Content-type: application/json; charset=utf-8');
+        echo json_encode($json);
+        exit;
+    }
+
+    private function cleanFiles($directory, $paths)
+    {
+        $list = scandir($directory);
+        foreach ($list as $path) {
+            if ($path === '.' || $path === '..') {
+                continue;
+            }
+
+            $path = "$directory/$path";
+            if (is_dir($path)) {
+                $this->cleanFiles($path, $paths);
+            } elseif (is_file($path) && !isset($paths[$path])) {
+                @unlink($path);
+            }
+        }
+        $list = array_diff(scandir($directory), ['.','..']);
+        if (count($list) === 0) {
+            rmdir($directory);
+        }
     }
 }
