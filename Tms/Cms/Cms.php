@@ -392,6 +392,31 @@ class Cms extends User implements PackageInterface
         return (empty($command_path)) ? 'php' : $command_path;
     }
 
+    protected function cleanupRevisions($type, $sitekey = null, $entrykey = null): bool
+    {
+        if (empty($sitekey)) {
+            $sitekey = $this->siteID;
+        }
+
+        $sql = "DELETE src FROM `table::{$type}` src
+                  LEFT JOIN (SELECT id FROM `table::{$type}` WHERE revision = ?) org
+                    ON src.identifier = org.id
+                 WHERE src.sitekey = ? AND org.id IS NULL";
+        $options = ['0', $sitekey];
+
+        if (!empty($entrykey)) {
+            $sql .= ' AND src.entrykey = ?';
+            $options[] = $entrykey;
+        }
+
+        if (false === $this->db->exec($sql, $options)) {
+            trigger_error($this->db->error());
+            return false;
+        }
+
+        return true;
+    }
+
     protected function cleanupCustomFields($type, $sitekey = null): bool
     {
         if (empty($sitekey)) {

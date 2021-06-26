@@ -241,7 +241,9 @@ class Category extends Template
         $path = $this->getCategoryPath($id, 1);
         $parent = $this->parentCategory($id, 'id, title');
 
-        if (false !== $this->db->delete('category', "id = ? AND sitekey = ? AND reserved = '0'", [$id, $this->siteID])) {
+        if (false !== $this->db->delete('category', "id = ? AND sitekey = ? AND reserved = '0'", [$id, $this->siteID])
+            && false !== $this->db->nsmCleanup('category')
+        ) {
             if (!file_exists($path) || File::rmdirs($path, true)) {
                 if ($this->siteProperty('type') === 'static') {
                     self::reassembly($parent);

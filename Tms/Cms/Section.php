@@ -233,6 +233,7 @@ class Section extends Entry
 
         $sectionkey = $this->request->param('remove');
         $entrykey = $this->getEntryKey($sectionkey);
+        $sitekey = $this->siteID;
 
         // Remove attachment files
         $directories = $this->db->select('id', 'section', 'WHERE identifier = ?', [$sectionkey]);
@@ -244,10 +245,14 @@ class Section extends Entry
 
         $unit = $this->db->get('lft, rgt', 'section', 'id = ?', [$sectionkey]);
 
-        if (false !== $this->db->delete('section', 'entrykey = ? AND lft BETWEEN ? AND ?', [$entrykey, $unit['lft'], $unit['rgt']])) {
+        $rebuild = $this->app->cnf('application:cms_build_at_remove_section');
+        if (false !== $this->db->delete('section', 'entrykey = ? AND revision = ? AND lft BETWEEN ? AND ?', [$entrykey, '0', $unit['lft'], $unit['rgt']])
+            && ($rebuild !== 'immediately' || false !== $this->cleanupRevisions('section', $sitekey, $entrykey))
+            && false !== $this->db->nsmCleanup('section', 'WHERE sitekey = ? and entrykey = ? and revision = ?', [$sitekey, $entrykey, '0'])
+        ) {
 
             // Rebuild entry file
-            if (!empty($entrykey)) {
+            if ($rebuild === 'immediately' && !empty($entrykey)) {
                 $this->createEntryFile($entrykey);
                 $this->buildArchives($entrykey);
             }

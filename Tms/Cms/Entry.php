@@ -511,6 +511,9 @@ class Entry extends Category
         }
 
         // Release sections
+        if (false !== $this->cleanupRevisions('section', $sitekey, $entrykey)) {
+            trigger_error($this->db->error());
+        }
         if (false !== $sections = $this->db->select('id, entrykey AS eid', self::SECTION_TABLE, 'WHERE entrykey = ? AND revision = ? AND status = ?', [$entrykey, '0', 'draft'])) {
             foreach ($sections as $section) {
                 if (false === $this->releaseSection($section, true)) {
@@ -807,6 +810,8 @@ class Entry extends Category
             }
         }
 
+        $category = $this->db->get('category', self::ENTRY_TABLE, 'identifier = ?', [$entrykey]);
+        $this->request->param('category', $category);
         if ($result !== false && false !== $this->db->delete(self::SECTION_TABLE, 'entrykey = ?', [$entrykey])) {
             if (false !== $this->db->delete(self::ENTRY_TABLE, 'identifier = ?', [$entrykey])) {
                 $this->app->logger->log("Remove the entry `{$entrykey}'", 101);
