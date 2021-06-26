@@ -211,9 +211,6 @@ class Section extends Entry
             $this->db->update('section', ['status' => $this->request->param('publish')], 'id = ?', [$id], $raw);
         }
 
-        $sectionkey = $active_sectionkey;
-        $this->removeFiles($entrykey, $sectionkey);
-
         if ($this->siteProperty('type') === 'static') {
             if (   false === $this->createEntryFile($entrykey)
                 || false === $this->buildArchives($entrykey)

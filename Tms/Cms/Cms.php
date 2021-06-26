@@ -391,4 +391,34 @@ class Cms extends User implements PackageInterface
         $command_path = $this->app->cnf('cms:php_cli');
         return (empty($command_path)) ? 'php' : $command_path;
     }
+
+    protected function cleanupCustomFields($type, $sitekey = null): bool
+    {
+        if (empty($sitekey)) {
+            $sitekey = $this->siteID;
+        }
+
+        $sql = "DELETE dest FROM table::custom dest
+                  LEFT JOIN `table::{$type}` src ON dest.relkey = src.id
+                 WHERE dest.sitekey = ? AND dest.kind = ? AND src.id IS NULL";
+
+        if (false === $this->db->exec($sql, [$sitekey, $type])) {
+            trigger_error($this->db->error());
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function removeEmptyDir($directory)
+    {
+        if (is_dir($directory)) {
+            $list = array_diff(scandir($directory), ['.','..']);
+            if (count($list) === 0) {
+                return @rmdir($directory);
+            }
+        }
+
+        return false;
+    }
 }

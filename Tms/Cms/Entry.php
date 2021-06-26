@@ -241,8 +241,9 @@ class Entry extends Category
 
                 switch ($_FILES['file']['error'][$key]) {
                 case UPLOAD_ERR_OK:
-                case UPLOAD_ERR_NO_FILE:
                     break;
+                case UPLOAD_ERR_NO_FILE:
+                    continue 2;
                 case UPLOAD_ERR_INI_SIZE:
                 case UPLOAD_ERR_FORM_SIZE:
                     $error = 'File size is too large';
@@ -391,6 +392,8 @@ class Entry extends Category
                 }
             }
         }
+
+        $this->removeEmptyDir($upload_dir);
 
         return $count;
     }
@@ -560,6 +563,7 @@ class Entry extends Category
                     $this->app->logger->log("Remove entry file `$release_path'", 101);
                 }
                 $this->buildArchives($new_entrykey);
+                $this->removeEmptyDir($release_dir);
             } catch (Exception $e) {
                 trigger_error($e->getMessage());
 
@@ -663,23 +667,60 @@ class Entry extends Category
 
     private function copyCustomFields($entrykey, $sectionkey = null)
     {
+        $sitekey = $this->siteID;
         $kind = (empty($sectionkey)) ? 'entry' : 'section';
         $relkey = ($kind === 'section') ? $sectionkey : $entrykey;
-        $this->db->delete('custom', 'relkey = ? AND kind = ?', [$relkey, $kind]);
         $identifier = $this->db->get('identifier', $kind, 'id = ?', [$relkey]);
-        $fields = $this->db->select('*', 'custom', 'WHERE relkey = ? AND kind = ?', [$identifier, $kind]);
-        $dest = $this->site_data['path'].$this->site_data['uploaddir']."/$entrykey/$sectionkey";
-        foreach ((array) $fields as $field) {
+        $dest = rtrim($this->site_data['path']
+            . $this->site_data['uploaddir']
+            . "/{$entrykey}/{$sectionkey}", '/');
+
+        $keys = array_column((array)$this->db->select(
+            'id',
+            'custom',
+            'WHERE sitekey = ? AND relkey = ? AND kind = ?',
+            [$sitekey, $relkey, $kind]
+        ), 'id');
+
+        $fields = $this->db->select(
+            '*',
+            'custom',
+            'WHERE sitekey = ? AND relkey = ? AND kind = ?',
+            [$sitekey, $identifier, $kind]
+        );
+
+        foreach ((array)$fields as $field) {
             unset($field['id']);
             if (strpos($field['name'], 'file.') === 0) {
                 $path = explode('/', $field['data']);
                 $basename = array_pop($path);
-                $field['data'] = File::realpath("{$dest}/{$basename}");
+                $field['data'] = "{$dest}/{$basename}";
             }
             $field['relkey'] = $relkey;
-            if (false === $this->db->insert('custom', $field)) {
-                return false;
+
+            $id = array_shift($keys);
+
+            if (empty($id)) {
+                if (false === $this->db->insert('custom', $field)) {
+                    return false;
+                }
+            } else {
+                if (false === $this->db->update('custom', $field, 'id = ?', [$id])) {
+                    return false;
+                }
             }
+        }
+
+        // Cleanup old fields
+        if (!empty($keys)) {
+            $this->db->delete(
+                'custom',
+                sprintf('id IN(%s)', array_fill(0, count($keys), '?')),
+                $keys
+            );
+        }
+        if (false === $this->cleanupCustomFields($kind, $sitekey)) {
+            return false;
         }
 
         return true;
@@ -707,8 +748,6 @@ class Entry extends Category
                 return false;
             }
         }
-
-        $this->removeFiles($entrykey);
 
         if ($this->siteProperty('type') === 'static') {
             // Rebuild Archives
@@ -1195,6 +1234,7 @@ class Entry extends Category
                 }
             }
         }
+        $this->removeEmptyDir($dest);
     }
 
     protected function findArchive($categorykey) 
