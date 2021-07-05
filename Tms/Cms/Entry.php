@@ -511,7 +511,7 @@ class Entry extends Category
         }
 
         // Release sections
-        if (false !== $this->cleanupRevisions('section', $sitekey, $entrykey)) {
+        if (false !== $this->cleanupRevisions('section', $sid, $entrykey)) {
             trigger_error($this->db->error());
         }
         if (false !== $sections = $this->db->select('id, entrykey AS eid', self::SECTION_TABLE, 'WHERE entrykey = ? AND revision = ? AND status = ?', [$entrykey, '0', 'draft'])) {
