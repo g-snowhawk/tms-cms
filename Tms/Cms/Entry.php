@@ -240,10 +240,9 @@ class Entry extends Category
             foreach ($_FILES['file']['name'] as $key => $name) {
 
                 switch ($_FILES['file']['error'][$key]) {
+                case UPLOAD_ERR_NO_FILE:
                 case UPLOAD_ERR_OK:
                     break;
-                case UPLOAD_ERR_NO_FILE:
-                    continue 2;
                 case UPLOAD_ERR_INI_SIZE:
                 case UPLOAD_ERR_FORM_SIZE:
                     $error = 'File size is too large';
@@ -511,7 +510,7 @@ class Entry extends Category
         }
 
         // Release sections
-        if (false !== $this->cleanupRevisions('section', $sid, $entrykey)) {
+        if (false === $this->cleanupRevisions('section', $sid, $entrykey)) {
             trigger_error($this->db->error());
         }
         if (false !== $sections = $this->db->select('id, entrykey AS eid', self::SECTION_TABLE, 'WHERE entrykey = ? AND revision = ? AND status = ?', [$entrykey, '0', 'draft'])) {
